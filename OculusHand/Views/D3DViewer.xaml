@@ -1,0 +1,27 @@
+﻿<UserControl x:Class="OculuSLAM.Views.D3DViewer"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+        xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+        xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
+        xmlns:l="http://schemas.livet-mvvm.net/2011/wpf"
+        xmlns:v="clr-namespace:OculuSLAM.Views"
+        xmlns:vm="clr-namespace:OculuSLAM.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        mc:Ignorable="d"
+        d:DesignHeight="350" d:DesignWidth="525">
+    
+    <!--DataContextが存在すると、INotifyPropertyChangedイベント経由でのDependencyPropertyの値の更新ができない？-->
+    
+     <i:Interaction.Triggers>
+        <i:EventTrigger EventName="Closed">
+            <l:LivetCallMethodAction MethodTarget="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=ViewModel}" MethodName="Dispose"/>
+        </i:EventTrigger>
+    </i:Interaction.Triggers>
+    
+    <Grid>
+        <Image Source="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=ViewModel.ImageSource}" 
+               Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        <Border Background="Transparent" Name="mouseCapture"/>
+    </Grid>
+</UserControl>
