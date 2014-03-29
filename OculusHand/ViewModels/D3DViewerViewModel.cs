@@ -11,7 +11,7 @@ using Livet.Messaging.IO;
 using Livet.EventListeners;
 using Livet.Messaging.Windows;
 
-using OculuSLAM.Models;
+using OculusHand.Models;
 using SharpDX;
 using SharpDX.Direct3D9;
 using System.Windows;
@@ -21,7 +21,7 @@ using System.Runtime.InteropServices;
 using System.Drawing;
 using OpenCvSharp.CPlusPlus;
 
-namespace OculuSLAM.ViewModels
+namespace OculusHand.ViewModels
 {
     /// <summary>
     /// D3DViewerのビューモデルです。
@@ -36,12 +36,12 @@ namespace OculuSLAM.ViewModels
         Device _device;
         Effect _effect;
 
-        object _vertexBufferLock = new object();
-        object _cameraVertexBufferLock = new object();
-        int _count;
-
+        object _bufferUpdateLock = new object();
+        int _vertexCount;
+        int _indexCount;
         VertexBuffer _vertexBuffer;
-        VertexBuffer _cameraVertexBuffer;
+        IndexBuffer _indexBuffer;
+        Texture _texture;
 
         #endregion
 
@@ -100,10 +100,26 @@ namespace OculuSLAM.ViewModels
         /// 現在の点群を破棄して、与えられた点群を表示します。
         /// </summary>
         /// <param name="points">点群データ</param>
-        public void UpdatePoints(PointCloud cloud)
+        public void UpdateMesh(OculusHand.Models.Mesh mesh)
         {
-            var vl = from p in cloud.Points select new Vertex(p.X, p.Y, p.Z, p.R, p.G, p.B);
-            setVertices(vl.ToArray());
+            //左手系に変換
+            var vertices = mesh.Points.Select(p => new Vertex(p.X, p.Y, -p.Z, p.U, p.V)).ToArray();
+            var indices = mesh.Indices.ToArray();
+
+            if (indices.Length == 0)
+            {
+                _indexCount = 0;
+                return;
+            }
+
+            lock (_bufferUpdateLock)
+            {
+                setVertices(vertices);
+                setIndices(indices);
+                setTexture(mesh.Texture, mesh.TextureWidth, mesh.TextureHeight);
+                _vertexCount = vertices.Length;
+                _indexCount = indices.Length;
+            }
         }
 
         /// <summary>
@@ -113,61 +129,6 @@ namespace OculuSLAM.ViewModels
         public void UpdateMatrix(Matrix3D matrix)
         {
             setMatrix(matrix);
-        }
-
-        /// <summary>
-        /// 位置姿勢の変換行列を更新します。
-        /// </summary>
-        /// <param name="transform">位置姿勢変換行列</param>
-        public void UpdateTransform(Mat transform)
-        {
-            //[TODO]このメソッドが1回も呼び出されなかった場合に正しく描画されない問題を解決する
-            float scale = 0.1f;
-            Mat camera = Mat.Zeros(7, 4, (MatType)MatType.CV_32F);
-            getMat(-scale, -scale,      0).CopyTo(camera[new Range(0, 1), new Range(0, 4)]);
-            getMat(     0,      0, -scale).CopyTo(camera[new Range(1, 2), new Range(0, 4)]);
-            getMat(-scale,  scale,      0).CopyTo(camera[new Range(2, 3), new Range(0, 4)]);
-            getMat( scale,  scale,      0).CopyTo(camera[new Range(3, 4), new Range(0, 4)]);
-            getMat(     0,      0, -scale).CopyTo(camera[new Range(4, 5), new Range(0, 4)]);
-            getMat( scale, -scale,      0).CopyTo(camera[new Range(5, 6), new Range(0, 4)]);
-            getMat(-scale, -scale,      0).CopyTo(camera[new Range(6, 7), new Range(0, 4)]);
-
-            var arr = matToVertex(camera * transform).ToArray();
-
-            lock (_cameraVertexBufferLock)
-            {
-                if (_cameraVertexBuffer != null)
-                    _cameraVertexBuffer.Dispose();
-
-                //頂点バッファの作成
-                var size = Marshal.SizeOf(typeof(Vertex));
-                _cameraVertexBuffer = new VertexBuffer(_device, size * 7, Usage.None, Vertex.Format, Pool.Default);
-                var st = _cameraVertexBuffer.Lock(0, size * 7, LockFlags.None);
-                st.WriteRange<Vertex>(arr);
-                _cameraVertexBuffer.Unlock();
-            }
-        }
-
-        IEnumerable<Vertex> matToVertex(Mat mat)
-        {
-            var indexer = mat.GetGenericIndexer<float>();
-            for (int i = 0; i < mat.Rows; ++i)
-            {
-                yield return new Vertex(indexer[i, 0], indexer[i, 1], indexer[i, 2], 0, 0, 0);
-            }
-        }
-
-        Mat getMat(float x, float y, float z)
-        {
-            var mat = new Mat(1, 4, MatType.CV_32F);
-            var indexer = mat.GetGenericIndexer<float>();
-
-            indexer[0, 0] = x;
-            indexer[0, 1] = y;
-            indexer[0, 2] = z;
-            indexer[0, 3] = 1;
-
-            return mat;
         }
 
         /// <summary>
@@ -205,12 +166,13 @@ namespace OculuSLAM.ViewModels
 
             //デバイスの作成
             _device = new Device(new Direct3DEx(), 0, DeviceType.Hardware, IntPtr.Zero, CreateFlags.HardwareVertexProcessing, pp);
-            _effect = Effect.FromFile(_device, "PointSprite.fx", ShaderFlags.OptimizationLevel3);
-            _effect.Technique = "PointSprite";
+            _device.VertexFormat = Vertex.Format;
+            _device.SetRenderState(RenderState.FillMode, FillMode.Solid);
 
-            //パラメータのセット
+            //エフェクトの作成
+            _effect = Effect.FromFile(_device, "Mesh.fx", ShaderFlags.OptimizationLevel3);
+            _effect.Technique = "Mesh";
             _effect.SetValue("Transform", Matrix.Identity);
-            _effect.SetValue("PointSize", pointSize);
         }
 
         void releaseDirect3D()
@@ -221,33 +183,47 @@ namespace OculuSLAM.ViewModels
                 _effect.Dispose();
             if (_vertexBuffer != null)
                 _vertexBuffer.Dispose();
+            if (_indexBuffer != null)
+                _indexBuffer.Dispose();
+        }
+
+        void setIndices(int[] arr)
+        {
+            if (_indexBuffer != null)
+                _indexBuffer.Dispose();
+
+            //インデックスバッファの作成
+            var size = Marshal.SizeOf(typeof(int));
+            _indexBuffer = new IndexBuffer(_device, size * arr.Length, Usage.None, Pool.Default, false);
+            var st = _indexBuffer.Lock(0, size * arr.Length, LockFlags.None);
+            st.WriteRange<int>(arr);
+            _indexBuffer.Unlock();
         }
 
         void setVertices(Vertex[] arr)
         {
-            var count = arr.Length;
+            if (_vertexBuffer != null)
+                _vertexBuffer.Dispose();
 
-            if (0 == count)
-            {
-                _count = count;
-                return;
-            }
+            //頂点バッファの作成
+            var size = Marshal.SizeOf(typeof(Vertex));
+            _vertexBuffer = new VertexBuffer(_device, size * arr.Length, Usage.None, Vertex.Format, Pool.Default);
+            var st = _vertexBuffer.Lock(0, size * arr.Length, LockFlags.None);
+            st.WriteRange<Vertex>(arr);
+            _vertexBuffer.Unlock();
+        }
 
-            //頂点バッファの更新
-            lock (_vertexBufferLock)
-            {
-                if (_vertexBuffer != null)
-                    _vertexBuffer.Dispose();
+        void setTexture(byte[] arr, int width, int height)
+        {
+            if (_texture != null)
+                _texture.Dispose();
 
-                //頂点バッファの作成
-                var size = Marshal.SizeOf(typeof(Vertex));
-                _vertexBuffer = new VertexBuffer(_device, size * count, Usage.None, Vertex.Format, Pool.Default);
-                var st = _vertexBuffer.Lock(0, size * count, LockFlags.None);
-                st.WriteRange<Vertex>(arr);
-                _vertexBuffer.Unlock();
+            //[TODO]Test
+            _texture = Texture.FromFile(_device, "test_texture.jpg");
 
-                _count = count;
-            }
+            //_texture = Texture.FromMemory(_device, 
+            //    arr, width, height, 1, 
+            //    Usage.None, Format.R8G8B8, Pool.Default, Filter.Default, Filter.Default, 0);
         }
 
         void render(ColorBGRA background)
@@ -259,25 +235,14 @@ namespace OculuSLAM.ViewModels
             _device.BeginScene();
             _effect.Begin();
 
-            _device.SetRenderState(RenderState.FillMode, FillMode.Point);
             _effect.BeginPass(0);
-            if (0 < _count)
-                lock (_vertexBufferLock)
+            if (0 < _vertexCount)
+                lock (_bufferUpdateLock)
                 {
                     _device.SetStreamSource(0, _vertexBuffer, 0, Marshal.SizeOf(typeof(Vertex)));
-                    _device.VertexFormat = Vertex.Format;
-                    _device.DrawPrimitives(PrimitiveType.PointList, 0, _count);
-                }
-            _effect.EndPass();
-
-            _device.SetRenderState(RenderState.FillMode, FillMode.Wireframe);
-            _effect.BeginPass(0);
-            if (0 < _count)
-                lock (_vertexBufferLock)
-                {
-                    _device.SetStreamSource(0, _cameraVertexBuffer, 0, Marshal.SizeOf(typeof(Vertex)));
-                    _device.VertexFormat = Vertex.Format;
-                    _device.DrawPrimitives(PrimitiveType.TriangleStrip, 0, 7);
+                    _device.Indices = _indexBuffer;
+                    _device.SetTexture(0, _texture);
+                    _device.DrawIndexedPrimitive(PrimitiveType.TriangleList, 0, 0, _vertexCount, 0, _indexCount);
                 }
             _effect.EndPass();
 
@@ -308,20 +273,19 @@ namespace OculuSLAM.ViewModels
         [StructLayout(LayoutKind.Sequential)]
         struct Vertex
         {
-            public const VertexFormat Format = VertexFormat.Position | VertexFormat.Normal;
+            public const VertexFormat Format = VertexFormat.Position | VertexFormat.Texture0;
 
             public Vector3 Position;
-            public Vector3 Color;
+            public Vector2 Texture;
 
-            public Vertex(float x, float y, float z, float r, float g, float b)
+            public Vertex(float x, float y, float z, float u, float v)
             {
                 Position.X = x;
                 Position.Y = y;
-                Position.Z = -z;    //左手系に変換
+                Position.Z = z;
 
-                Color.X = r;
-                Color.Y = g;
-                Color.Z = b;
+                Texture.X = u;
+                Texture.Y = v;
             }
         }
 

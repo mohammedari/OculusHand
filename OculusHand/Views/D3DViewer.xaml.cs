@@ -14,12 +14,12 @@ using System.Windows.Shapes;
 
 using _3DTools;
 using System.Windows.Media.Media3D;
-using OculuSLAM.ViewModels;
-using OculuSLAM.Models;
+using OculusHand.ViewModels;
+using OculusHand.Models;
 using System.ComponentModel;
 using OpenCvSharp.CPlusPlus;
 
-namespace OculuSLAM.Views
+namespace OculusHand.Views
 {
     /* 
      * ViewModelからの変更通知などの各種イベントを受け取る場合は、PropertyChangedWeakEventListenerや
@@ -86,22 +86,22 @@ namespace OculuSLAM.Views
         /// 表示する点群データです。
         /// </summary>
         [Bindable(true)]
-        public PointCloud Points
+        public Mesh Mesh
         {
-            get { return (PointCloud)GetValue(PointsProperty); }
-            set { SetValue(PointsProperty, value); }
+            get { return (Mesh)GetValue(MeshProperty); }
+            set { SetValue(MeshProperty, value); }
         }
 
         /// <summary>
         /// 点群データの依存関係プロパティです。値が更新された際に、表示される点群が更新されます。
         /// </summary>
-        public static readonly DependencyProperty PointsProperty =
+        public static readonly DependencyProperty MeshProperty =
             DependencyProperty.Register(
-                "Points",
-                typeof(PointCloud), 
+                "Mesh",
+                typeof(Mesh), 
                 typeof(D3DViewer), 
                 new FrameworkPropertyMetadata(
-                    new PointCloud(), 
+                    new Mesh(), 
                     FrameworkPropertyMetadataOptions.AffectsRender, 
                     new PropertyChangedCallback(onPointsChanged)
                 )
@@ -112,40 +112,7 @@ namespace OculuSLAM.Views
         {
             D3DViewer viewer = d as D3DViewer;
             if (viewer != null && e.NewValue != null)
-                viewer.ViewModel.UpdatePoints((PointCloud)e.NewValue);
-        }
-        #endregion
-
-        #region Transform依存関係プロパティ
-        /// <summary>
-        /// カメラの位置姿勢です。
-        /// </summary>
-        [Bindable(true)]
-        public Mat Transform
-        {
-            get { return (Mat)GetValue(TransformProperty); }
-            set { SetValue(TransformProperty, value); }
-        }
-
-        /// <summary>
-        /// カメラの位置姿勢の依存関係プロパティです。値が更新された際に、表示されるカメラ座標が更新されます。
-        /// </summary>
-        public static readonly DependencyProperty TransformProperty =
-            DependencyProperty.Register(
-                "Transform", 
-                typeof(Mat), 
-                typeof(D3DViewer), 
-                new FrameworkPropertyMetadata(
-                    Mat.Eye(4, 4, MatType.CV_32F).ToMat(), 
-                    FrameworkPropertyMetadataOptions.AffectsRender, 
-                    new PropertyChangedCallback(onTransformChanged)));
-
-        //依存関係プロパティが更新されると、VMに位置姿勢の更新を通知します。
-        private static void onTransformChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
-        {
-            D3DViewer viewer = d as D3DViewer;
-            if (viewer != null && e.NewValue != null)
-                viewer.ViewModel.UpdateTransform((Mat)e.NewValue);
+                viewer.ViewModel.UpdateMesh((Mesh)e.NewValue);
         }
         #endregion
     }

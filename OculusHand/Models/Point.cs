@@ -4,10 +4,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace OculuSLAM.Models
+namespace OculusHand.Models
 {
-    public struct PointXYZRGB
+    /// <summary>
+    /// GestureCameraから取得される点群を表現するクラス
+    /// </summary>
+    public class Point
     {
+        public float U;
+        public float V;
         public float X;
         public float Y;
         public float Z;
@@ -15,8 +20,10 @@ namespace OculuSLAM.Models
         public float G;
         public float B;
 
-        public PointXYZRGB(float x, float y, float z, float r, float g, float b)
+        public Point(float u, float v, float x, float y, float z, float r, float g, float b)
         {
+            U = u;
+            V = v;
             X = x;
             Y = y;
             Z = z;
@@ -27,7 +34,7 @@ namespace OculuSLAM.Models
         //////////////////////////////////////////////
         #region 比較演算子の実装
 
-        public static bool operator ==(PointXYZRGB lhs, PointXYZRGB rhs)
+        public static bool operator ==(Point lhs, Point rhs)
         {
             if (object.ReferenceEquals(lhs, rhs))
                 return true;
@@ -38,7 +45,7 @@ namespace OculuSLAM.Models
             return lhs.Equals(rhs);
         }
 
-        public static bool operator !=(PointXYZRGB lhs, PointXYZRGB rhs)
+        public static bool operator !=(Point lhs, Point rhs)
         {
             return !(lhs == rhs);
         }
@@ -50,14 +57,16 @@ namespace OculuSLAM.Models
                 return false;
             }
 
-            var other = (PointXYZRGB)obj;
-            return X == other.X && Y == other.Y && Z == other.Z && 
+            var other = (Point)obj;
+            return U == other.U && V == other.V && 
+                   X == other.X && Y == other.Y && Z == other.Z && 
                    R == other.R && G == other.G && B == other.B;
         }
 
         public override int GetHashCode()
         {
-            return X.GetHashCode() ^ Y.GetHashCode() ^ Z.GetHashCode() ^
+            return U.GetHashCode() ^ V.GetHashCode() ^ 
+                   X.GetHashCode() ^ Y.GetHashCode() ^ Z.GetHashCode() ^
                    R.GetHashCode() ^ G.GetHashCode() ^ B.GetHashCode(); ;
         }
 

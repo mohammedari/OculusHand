@@ -47,6 +47,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>InfrastructureAssemblies\Livet.dll</HintPath>
     </Reference>
+    <Reference Include="MIConvexHullPlugin, Version=1.0.10.1021, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>InfrastructureAssemblies\MIConvexHullPlugin.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.Expression.Interactions">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>InfrastructureAssemblies\Microsoft.Expression.Interactions.dll</HintPath>
@@ -116,10 +120,13 @@
     <Compile Include="Models\ConfigUtil\ConfigManager.cs" />
     <Compile Include="Models\ConfigUtil\ConfigParameter.cs" />
     <Compile Include="Models\GestureCamera.cs" />
+    <Compile Include="Models\GestureCameraData.cs" />
     <Compile Include="Models\GestureCameraException.cs" />
     <Compile Include="Models\GestureCameraUtil.cs" />
+    <Compile Include="Models\HandRecognition.cs" />
+    <Compile Include="Models\Mesh.cs" />
     <Compile Include="Models\MyConfigParameter.cs" />
-    <Compile Include="Models\PointXYZRGB.cs" />
+    <Compile Include="Models\Point.cs" />
     <Compile Include="Models\Util.cs" />
     <Compile Include="ViewModels\D3DViewerViewModel.cs" />
     <Compile Include="ViewModels\MainWindowViewModel.cs" />
@@ -163,12 +170,16 @@
     <Content Include="InfrastructureAssemblies\libpxcclr.dll" />
     <Content Include="InfrastructureAssemblies\Livet.dll" />
     <Content Include="InfrastructureAssemblies\Livet.XML" />
+    <Content Include="InfrastructureAssemblies\MIConvexHullPlugin.dll" />
+    <Resource Include="InfrastructureAssemblies\MIConvexHullPlugin.xml" />
     <Content Include="InfrastructureAssemblies\Microsoft.Expression.Interactions.dll" />
     <Content Include="InfrastructureAssemblies\System.Windows.Interactivity.dll" />
     <Content Include="OpenCvSharpExtern.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="PointSprite.fx" />
+    <Content Include="Mesh.fx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

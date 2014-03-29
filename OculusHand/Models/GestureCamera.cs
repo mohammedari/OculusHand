@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
 
-namespace OculuSLAM.Models
+namespace OculusHand.Models
 {
     public class GestureCamera : IDisposable
     {
@@ -136,7 +136,7 @@ namespace OculuSLAM.Models
             var verticies = depthData.ToShortArray(0, 3 * depthWidth * depthHeight);
             var uv = depthData.ToFloatArray(2, 2 * depthWidth * depthHeight);
 
-            var points = new List<PointXYZRGB>(verticies.Length);
+            var data = new GestureCameraData(depthWidth, depthHeight, colorWidth, colorHeight, colorImage);
             for (int j = 0; j < depthHeight; ++j)
                 for (int i = 0; i < depthWidth; ++i)
                 {
@@ -159,7 +159,8 @@ namespace OculuSLAM.Models
                     float b = colorImage[3 * (colorY * colorWidth + colorX) + 0] / 255.0f;
                     float g = colorImage[3 * (colorY * colorWidth + colorX) + 1] / 255.0f;
                     float r = colorImage[3 * (colorY * colorWidth + colorX) + 2] / 255.0f;
-                    points.Add(new PointXYZRGB(x, y, z, r, g, b));
+
+                    data.Set(i, j, new Point(u, v, x, y, z, r, g, b));
                 }
 
             GestureCameraUtil.Assert(
@@ -170,13 +171,13 @@ namespace OculuSLAM.Models
                 "Failed to release access on depth image.");
             _pipeline.ReleaseFrame();
 
-            RaiseOnUpdated(PointCloud.CreateFromExternalBuffer(points));
+            RaiseOnUpdated(data);
         }
 
-        void RaiseOnUpdated(PointCloud cloud)
+        void RaiseOnUpdated(GestureCameraData data)
         {
             if (OnUpdated != null)
-                OnUpdated(this, new OnUpdatedEventArgs(cloud));
+                OnUpdated(this, new OnUpdatedEventArgs(data));
         }
         #endregion
 
@@ -259,11 +260,11 @@ namespace OculuSLAM.Models
         /// </summary>
         public class OnUpdatedEventArgs : EventArgs
         {
-            public PointCloud Cloud { get; private set; }
+            public GestureCameraData Data { get; private set; }
 
-            internal OnUpdatedEventArgs(PointCloud cloud)
+            internal OnUpdatedEventArgs(GestureCameraData data)
             {
-                Cloud = cloud;
+                Data = data;
             }
         }
         #endregion

@@ -1,12 +1,12 @@
-﻿<Window x:Class="OculuSLAM.Views.MainWindow"
+﻿<Window x:Class="OculusHand.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
         xmlns:ei="http://schemas.microsoft.com/expression/2010/interactions"
         xmlns:l="http://schemas.livet-mvvm.net/2011/wpf"
-        xmlns:v="clr-namespace:OculuSLAM.Views"
-        xmlns:vm="clr-namespace:OculuSLAM.ViewModels"
-        ResizeMode="NoResize" WindowState="Maximized" WindowStyle="None" Title="OculuSLAM">
+        xmlns:v="clr-namespace:OculusHand.Views"
+        xmlns:vm="clr-namespace:OculusHand.ViewModels"
+        ResizeMode="NoResize" WindowState="Maximized" WindowStyle="None" Title="OculusHand">
     
     <Window.DataContext>
         <vm:MainWindowViewModel/>
@@ -39,7 +39,7 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="auto"/>
         </Grid.RowDefinitions>
-        <v:D3DViewer Points="{Binding Points}" Transform="{Binding Transform}"/>
+        <v:D3DViewer Mesh="{Binding Mesh}"/>
         <Label Grid.Row="1" Content="{Binding ErrorMessage}" Foreground="Red" HorizontalAlignment="Right"/>
     </Grid>
 </Window>

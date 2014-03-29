@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 using ConfigUtil;
 
-namespace OculuSLAM.Models
+namespace OculusHand.Models
 {
     public class MyConfigParameter : ConfigParameter
     {

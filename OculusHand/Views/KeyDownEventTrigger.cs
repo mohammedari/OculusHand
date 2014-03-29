@@ -8,7 +8,7 @@ using Interactivity = System.Windows.Interactivity;
 using System.Windows.Input;
 using System.Windows;
 
-namespace OculuSLAM.Views
+namespace OculusHand.Views
 {
     /// <summary>
     /// 特定のキーが押下された際にイベントを起動するトリガーです。
