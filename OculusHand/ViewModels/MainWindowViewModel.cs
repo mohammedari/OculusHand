@@ -15,7 +15,6 @@ using Livet.Messaging.Windows;
 using System.Windows.Media.Media3D;
 using System.Windows.Media.Imaging;
 using OculusHand.Models;
-using OpenCvSharp.CPlusPlus;
 
 namespace OculusHand.ViewModels
 {

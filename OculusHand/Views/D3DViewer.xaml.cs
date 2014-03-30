@@ -17,7 +17,6 @@ using System.Windows.Media.Media3D;
 using OculusHand.ViewModels;
 using OculusHand.Models;
 using System.ComponentModel;
-using OpenCvSharp.CPlusPlus;
 
 namespace OculusHand.Views
 {
