@@ -19,13 +19,13 @@ sampler2D HandSampler = sampler_state
 struct VertexShaderInput
 {
     float3 Position : POSITION;
-	float2 Texture : TEXCOORD;
+	float2 Texture : NORMAL;
 };
 
 struct VertexShaderOutput
 {
     float4 Position : POSITION;
-	float2 Texture : TEXCOORD;
+	float2 Texture : TEXCOORD0;
 };
 
 //////////////////////////////////////////////////////////////
@@ -42,7 +42,7 @@ VertexShaderOutput VertexShaderFunction(const VertexShaderInput input)
 
 float4 PixelShaderFunction(const VertexShaderOutput input) : COLOR
 {
-	return saturate(tex2D(HandSampler,input.Texture));
+	return saturate(tex2D(HandSampler, input.Texture));
 }
 
 //////////////////////////////////////////////////////////////

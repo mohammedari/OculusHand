@@ -197,6 +197,9 @@ namespace OculusHand.ViewModels
             var st = _indexBuffer.Lock(0, size * arr.Length, LockFlags.None);
             st.WriteRange<int>(arr);
             _indexBuffer.Unlock();
+
+            //インデックスバッファのセット
+            _device.Indices = _indexBuffer;
         }
 
         void setVertices(Vertex[] arr)
@@ -210,19 +213,34 @@ namespace OculusHand.ViewModels
             var st = _vertexBuffer.Lock(0, size * arr.Length, LockFlags.None);
             st.WriteRange<Vertex>(arr);
             _vertexBuffer.Unlock();
+
+            //頂点バッファのセット
+            _device.SetStreamSource(0, _vertexBuffer, 0, Marshal.SizeOf(typeof(Vertex)));
         }
 
         void setTexture(byte[] arr, int width, int height)
         {
-            if (_texture != null)
-                _texture.Dispose();
+            if (_texture == null /*|| widthとheightのパラメータが合わない場合*/)
+            {
+                if (_texture != null)
+                    _texture.Dispose();
 
-            //[TODO]Test
-            _texture = Texture.FromFile(_device, "test_texture.jpg");
+                //[TODO]Test
+                //_texture = Texture.FromFile(_device, "test_texture.jpg");
+                _texture = new Texture(_device, width, height, 1, Usage.None, Format.R8G8B8, Pool.Default); //エラーが出る
 
-            //_texture = Texture.FromMemory(_device, 
-            //    arr, width, height, 1, 
-            //    Usage.None, Format.R8G8B8, Pool.Default, Filter.Default, Filter.Default, 0);
+                //テクスチャのセット
+                var handle = _effect.GetParameter(null, "HandTexture");
+                _effect.SetTexture(handle, _texture);
+            }
+
+            //テクスチャの書き込み
+            var data = _texture.LockRectangle(0, LockFlags.None);
+            using (var ds = new DataStream(data.DataPointer, width * height * 3, true, true))
+            {
+                ds.WriteRange<byte>(arr);
+            }
+            _texture.UnlockRectangle(0);
         }
 
         void render(ColorBGRA background)
@@ -238,9 +256,6 @@ namespace OculusHand.ViewModels
             if (0 < _vertexCount)
                 lock (_bufferUpdateLock)
                 {
-                    _device.SetStreamSource(0, _vertexBuffer, 0, Marshal.SizeOf(typeof(Vertex)));
-                    _device.Indices = _indexBuffer;
-                    _device.SetTexture(0, _texture);
                     _device.DrawIndexedPrimitive(PrimitiveType.TriangleList, 0, 0, _vertexCount, 0, _indexCount);
                 }
             _effect.EndPass();
@@ -272,10 +287,11 @@ namespace OculusHand.ViewModels
         [StructLayout(LayoutKind.Sequential)]
         struct Vertex
         {
-            public const VertexFormat Format = VertexFormat.Position | VertexFormat.Texture0;
+            //[TODO]VertexFormat.Texture0だとシェーダに値が渡らない問題を解決する
+            public static readonly VertexFormat Format = VertexFormat.Position | VertexFormat.Normal;
 
             public Vector3 Position;
-            public Vector2 Texture;
+            public Vector3 Texture;
 
             public Vertex(float x, float y, float z, float u, float v)
             {
@@ -285,6 +301,7 @@ namespace OculusHand.ViewModels
 
                 Texture.X = u;
                 Texture.Y = v;
+                Texture.Z = 0;
             }
         }
 
