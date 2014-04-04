@@ -41,6 +41,8 @@ namespace OculusHand.ViewModels
         VertexBuffer _vertexBuffer;
         IndexBuffer _indexBuffer;
         Texture _texture;
+        int _vertexBufferSize = 320 * 240;
+        int _indexBufferSize = 320 * 240 * 30;
 
         #endregion
 
@@ -164,7 +166,7 @@ namespace OculusHand.ViewModels
             };
 
             //デバイスの作成
-            _device = new Device(new Direct3DEx(), 0, DeviceType.Hardware, IntPtr.Zero, CreateFlags.HardwareVertexProcessing, pp);
+            _device = new Device(new Direct3DEx(), 0, DeviceType.Hardware, IntPtr.Zero, CreateFlags.HardwareVertexProcessing | CreateFlags.Multithreaded, pp);
             _device.VertexFormat = Vertex.Format;
             _device.SetRenderState(RenderState.FillMode, FillMode.Solid);
 
@@ -188,34 +190,32 @@ namespace OculusHand.ViewModels
 
         void setIndices(int[] arr)
         {
-            if (_indexBuffer != null)
-                _indexBuffer.Dispose();
-
             //インデックスバッファの作成
             var size = Marshal.SizeOf(typeof(int));
-            _indexBuffer = new IndexBuffer(_device, size * arr.Length, Usage.None, Pool.Default, false);
+            if (_indexBuffer == null)
+            {
+                _indexBuffer = new IndexBuffer(_device, size * _indexBufferSize, Usage.WriteOnly | Usage.Dynamic, Pool.Default, false);
+                _device.Indices = _indexBuffer;
+            }
+
             var st = _indexBuffer.Lock(0, size * arr.Length, LockFlags.None);
             st.WriteRange<int>(arr);
             _indexBuffer.Unlock();
-
-            //インデックスバッファのセット
-            _device.Indices = _indexBuffer;
         }
 
         void setVertices(Vertex[] arr)
         {
-            if (_vertexBuffer != null)
-                _vertexBuffer.Dispose();
-
             //頂点バッファの作成
             var size = Marshal.SizeOf(typeof(Vertex));
-            _vertexBuffer = new VertexBuffer(_device, size * arr.Length, Usage.None, Vertex.Format, Pool.Default);
+            if (_vertexBuffer == null)
+            {
+                _vertexBuffer = new VertexBuffer(_device, size * _vertexBufferSize, Usage.WriteOnly | Usage.Dynamic, Vertex.Format, Pool.Default);
+                _device.SetStreamSource(0, _vertexBuffer, 0, Marshal.SizeOf(typeof(Vertex)));
+            }
+
             var st = _vertexBuffer.Lock(0, size * arr.Length, LockFlags.None);
             st.WriteRange<Vertex>(arr);
             _vertexBuffer.Unlock();
-
-            //頂点バッファのセット
-            _device.SetStreamSource(0, _vertexBuffer, 0, Marshal.SizeOf(typeof(Vertex)));
         }
 
         void setTexture(byte[] arr, int width, int height)
@@ -226,8 +226,11 @@ namespace OculusHand.ViewModels
                     _texture.Dispose();
 
                 //[TODO]Test
-                //_texture = Texture.FromFile(_device, "test_texture.jpg");
-                _texture = new Texture(_device, width, height, 1, Usage.None, Format.R8G8B8, Pool.Default); //エラーが出る
+                _texture = Texture.FromFile(_device, "test_texture.jpg");
+                //var desc = _texture.GetLevelDescription(0);
+                //Console.WriteLine(desc.Format);
+
+                //_texture = new Texture(_device, width, height, 1, Usage.Dynamic, Format.X8R8G8B8, Pool.Default); //エラーが出る
 
                 //テクスチャのセット
                 var handle = _effect.GetParameter(null, "HandTexture");
@@ -235,12 +238,12 @@ namespace OculusHand.ViewModels
             }
 
             //テクスチャの書き込み
-            var data = _texture.LockRectangle(0, LockFlags.None);
-            using (var ds = new DataStream(data.DataPointer, width * height * 3, true, true))
-            {
-                ds.WriteRange<byte>(arr);
-            }
-            _texture.UnlockRectangle(0);
+            //var data = _texture.LockRectangle(0, LockFlags.None);
+            //using (var ds = new DataStream(data.DataPointer, width * height * 3, true, true))
+            //{
+            //    ds.WriteRange<byte>(arr);
+            //}
+            //_texture.UnlockRectangle(0);
         }
 
         void render(ColorBGRA background)
