@@ -225,12 +225,7 @@ namespace OculusHand.ViewModels
                 if (_texture != null)
                     _texture.Dispose();
 
-                //[TODO]Test
-                _texture = Texture.FromFile(_device, "test_texture.jpg");
-                //var desc = _texture.GetLevelDescription(0);
-                //Console.WriteLine(desc.Format);
-
-                //_texture = new Texture(_device, width, height, 1, Usage.Dynamic, Format.X8R8G8B8, Pool.Default); //エラーが出る
+                _texture = new Texture(_device, width, height, 1, Usage.Dynamic, Format.X8R8G8B8, Pool.Default); //エラーが出る
 
                 //テクスチャのセット
                 var handle = _effect.GetParameter(null, "HandTexture");
@@ -238,12 +233,19 @@ namespace OculusHand.ViewModels
             }
 
             //テクスチャの書き込み
-            //var data = _texture.LockRectangle(0, LockFlags.None);
-            //using (var ds = new DataStream(data.DataPointer, width * height * 3, true, true))
-            //{
-            //    ds.WriteRange<byte>(arr);
-            //}
-            //_texture.UnlockRectangle(0);
+            var data = _texture.LockRectangle(0, LockFlags.None);
+            using (var ds = new DataStream(data.DataPointer, width * height * 4, false, true))
+            {
+                //ds.WriteRange(arr);
+                for (int i = 0; i < width * height; ++i)
+                {
+                    ds.WriteByte(0);
+                    ds.Write(arr[i * 3 + 2]);
+                    ds.Write(arr[i * 3 + 1]);
+                    ds.Write(arr[i * 3 + 0]);
+                }
+            }
+            _texture.UnlockRectangle(0);
         }
 
         void render(ColorBGRA background)
