@@ -186,6 +186,8 @@ namespace OculusHand.ViewModels
                 _vertexBuffer.Dispose();
             if (_indexBuffer != null)
                 _indexBuffer.Dispose();
+            if (_texture != null)
+                _texture.Dispose();
         }
 
         void setIndices(int[] arr)
@@ -220,12 +222,14 @@ namespace OculusHand.ViewModels
 
         void setTexture(byte[] arr, int width, int height)
         {
-            if (_texture == null /*|| widthとheightのパラメータが合わない場合*/)
+            if (_texture == null || 
+                _texture.GetLevelDescription(0).Width != width || 
+                _texture.GetLevelDescription(0).Height != height)
             {
                 if (_texture != null)
                     _texture.Dispose();
 
-                _texture = new Texture(_device, width, height, 1, Usage.Dynamic, Format.X8R8G8B8, Pool.Default); //エラーが出る
+                _texture = new Texture(_device, width, height, 1, Usage.Dynamic, Format.A8R8G8B8, Pool.Default); //エラーが出る
 
                 //テクスチャのセット
                 var handle = _effect.GetParameter(null, "HandTexture");
@@ -236,13 +240,12 @@ namespace OculusHand.ViewModels
             var data = _texture.LockRectangle(0, LockFlags.None);
             using (var ds = new DataStream(data.DataPointer, width * height * 4, false, true))
             {
-                //ds.WriteRange(arr);
                 for (int i = 0; i < width * height; ++i)
                 {
-                    ds.WriteByte(0);
-                    ds.Write(arr[i * 3 + 2]);
-                    ds.Write(arr[i * 3 + 1]);
-                    ds.Write(arr[i * 3 + 0]);
+                    ds.Write(arr[i * 3 + 0]); //B
+                    ds.Write(arr[i * 3 + 1]); //G
+                    ds.Write(arr[i * 3 + 2]); //R
+                    ds.WriteByte(255);        //A
                 }
             }
             _texture.UnlockRectangle(0);
@@ -258,7 +261,7 @@ namespace OculusHand.ViewModels
             _effect.Begin();
 
             _effect.BeginPass(0);
-            if (0 < _vertexCount)
+            if (0 < _vertexCount && 0 < _indexCount)
                 lock (_bufferUpdateLock)
                 {
                     _device.DrawIndexedPrimitive(PrimitiveType.TriangleList, 0, 0, _vertexCount, 0, _indexCount);
