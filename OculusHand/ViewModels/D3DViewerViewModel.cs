@@ -41,8 +41,6 @@ namespace OculusHand.ViewModels
         VertexBuffer _vertexBuffer;
         IndexBuffer _indexBuffer;
         Texture _texture;
-        int _vertexBufferSize = 320 * 240;
-        int _indexBufferSize = 320 * 240 * 30;
 
         #endregion
 
@@ -194,9 +192,9 @@ namespace OculusHand.ViewModels
         {
             //インデックスバッファの作成
             var size = Marshal.SizeOf(typeof(int));
-            if (_indexBuffer == null)
+            if (_indexBuffer == null || _indexCount < arr.Length)
             {
-                _indexBuffer = new IndexBuffer(_device, size * _indexBufferSize, Usage.WriteOnly | Usage.Dynamic, Pool.Default, false);
+                _indexBuffer = new IndexBuffer(_device, size * arr.Length, Usage.WriteOnly | Usage.Dynamic, Pool.Default, false);
                 _device.Indices = _indexBuffer;
             }
 
@@ -209,9 +207,9 @@ namespace OculusHand.ViewModels
         {
             //頂点バッファの作成
             var size = Marshal.SizeOf(typeof(Vertex));
-            if (_vertexBuffer == null)
+            if (_vertexBuffer == null || _vertexCount < arr.Length)
             {
-                _vertexBuffer = new VertexBuffer(_device, size * _vertexBufferSize, Usage.WriteOnly | Usage.Dynamic, Vertex.Format, Pool.Default);
+                _vertexBuffer = new VertexBuffer(_device, size * arr.Length, Usage.WriteOnly | Usage.Dynamic, Vertex.Format, Pool.Default);
                 _device.SetStreamSource(0, _vertexBuffer, 0, Marshal.SizeOf(typeof(Vertex)));
             }
 
@@ -260,11 +258,21 @@ namespace OculusHand.ViewModels
             _device.BeginScene();
             _effect.Begin();
 
+            _device.SetRenderState(RenderState.FillMode, FillMode.Solid);
             _effect.BeginPass(0);
             if (0 < _vertexCount && 0 < _indexCount)
                 lock (_bufferUpdateLock)
                 {
-                    _device.DrawIndexedPrimitive(PrimitiveType.TriangleList, 0, 0, _vertexCount, 0, _indexCount);
+                    _device.DrawIndexedPrimitive(PrimitiveType.TriangleList, 0, 0, _vertexCount, 0, _indexCount / 3);
+                }
+            _effect.EndPass();
+
+            _device.SetRenderState(RenderState.FillMode, FillMode.Wireframe);
+            _effect.BeginPass(1);
+            if (0 < _vertexCount && 0 < _indexCount)
+                lock (_bufferUpdateLock)
+                {
+                    _device.DrawIndexedPrimitive(PrimitiveType.TriangleList, 0, 0, _vertexCount, 0, _indexCount / 3);
                 }
             _effect.EndPass();
 

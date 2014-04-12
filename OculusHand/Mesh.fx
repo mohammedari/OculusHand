@@ -45,6 +45,11 @@ float4 PixelShaderFunction(const VertexShaderOutput input) : COLOR
 	return saturate(tex2D(HandSampler, input.Texture));
 }
 
+float4 PixelShaderAlwaysBlack(const VertexShaderOutput input) : COLOR
+{
+	return float4(0, 0, 0, 1);
+}
+
 //////////////////////////////////////////////////////////////
 
 technique Mesh
@@ -53,5 +58,11 @@ technique Mesh
 	{
 		VertexShader = compile vs_2_0 VertexShaderFunction();
 		PixelShader = compile ps_2_0 PixelShaderFunction();
+	}
+
+	pass p1
+	{
+		VertexShader = compile vs_2_0 VertexShaderFunction();
+		PixelShader = compile ps_2_0 PixelShaderAlwaysBlack();
 	}
 }
