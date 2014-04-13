@@ -12,7 +12,8 @@ namespace OculusHand.Models
         //////////////////////////////////////////////
         #region Properties
 
-        //[TODO]手の領域抽出のためのパラメータ
+        public double MaxDepth { get; private set; }
+        public byte HandBlob { get; private set; }
 
         public Mesh Mesh { get; private set; }
 
@@ -20,6 +21,14 @@ namespace OculusHand.Models
 
         //////////////////////////////////////////////
         #region Public Methods
+
+        public HandRecognition()
+        {
+            //[TODO]パラメータをコンフィグから設定するようにする
+            MaxDepth = 0.8;
+            HandBlob = 0;
+        }
+
         /// <summary>
         /// 手の領域のメッシュを再構成します。
         /// </summary>
@@ -47,15 +56,17 @@ namespace OculusHand.Models
             for (int y = 0; y < data.Height; ++y)
                 for (int x = 0; x < data.Width; ++x)
                 {
-                    //[TODO]微分して手の領域の頂点を抽出する
-                    //手の頂点はPerCの検出結果を利用する？そっから拡大？
-                    //領域内の頂点をとってきて、Enumマップに書き込む
-                    //DFSで探してForegroundかBlankならtrueを返す、Backgroundならfalseを返す
-                    //点の距離でForegroundかBackgroundを書き込む、抜けてる点はBlankを書き込んで周りの戻り値がtrueならtrue
+                    //手領域以外は無視
+                    if (data.Blob[data.Width * y + x] != HandBlob)
+                        continue;
 
                     Point point;
                     if (data.TryGet(x, y, out point))
                     {
+                        //遠いところにあるものは無視
+                        if (MaxDepth < point.Z)
+                            continue;
+
                         var p = new Point2f(x, y);
                         delaunay.Insert(p);
                         indexDictionary[p] = index;
@@ -86,10 +97,12 @@ namespace OculusHand.Models
                 if (skip)
                     continue;
 
-                //[TODO]3頂点の深度画像座標の重心を切り捨ててfalseのインデックスになったら飛ばす
-                //var center = (points[0] + points[1] + points[2]);
-                //center.X /= 3;
-                //center.Y /= 3;
+                //3頂点の深度画像座標の重心を切り捨ててfalseのインデックスになったら飛ばす
+                var center = (points[0] + points[1] + points[2]);
+                center.X /= 3;
+                center.Y /= 3;
+                if (data.Blob[data.Width * (int)center.Y + (int)center.X] != HandBlob)
+                    continue;
 
                 mesh.AddIndices(points.Select(p => indexDictionary[p]));
             }

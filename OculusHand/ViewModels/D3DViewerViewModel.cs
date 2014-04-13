@@ -267,14 +267,14 @@ namespace OculusHand.ViewModels
                 }
             _effect.EndPass();
 
-            _device.SetRenderState(RenderState.FillMode, FillMode.Wireframe);
-            _effect.BeginPass(1);
-            if (0 < _vertexCount && 0 < _indexCount)
-                lock (_bufferUpdateLock)
-                {
-                    _device.DrawIndexedPrimitive(PrimitiveType.TriangleList, 0, 0, _vertexCount, 0, _indexCount / 3);
-                }
-            _effect.EndPass();
+            //_device.SetRenderState(RenderState.FillMode, FillMode.Wireframe);
+            //_effect.BeginPass(1);
+            //if (0 < _vertexCount && 0 < _indexCount)
+            //    lock (_bufferUpdateLock)
+            //    {
+            //        _device.DrawIndexedPrimitive(PrimitiveType.TriangleList, 0, 0, _vertexCount, 0, _indexCount / 3);
+            //    }
+            //_effect.EndPass();
 
             _effect.End();
             _device.EndScene();

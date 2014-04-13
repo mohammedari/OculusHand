@@ -72,9 +72,9 @@ namespace OculusHand.Models
         /// Create instance with device name and module name.
         /// </summary>
         /// <param name="deviceName">The name of using device</param>
-        public GestureCamera(string deviceName)
+        public GestureCamera(string deviceName, string gestureModuleName)
         {
-            buildPipeline(deviceName);
+            buildPipeline(deviceName, gestureModuleName);
         }
 
         ~GestureCamera()
@@ -85,12 +85,13 @@ namespace OculusHand.Models
 
         //////////////////////////////////////////////////
         #region Private Methods
-        void buildPipeline(string deviceName)
+        void buildPipeline(string deviceName, string gestureModuleName)
         {
             _pipeline = new UtilMPipeline();
             _pipeline.QueryCapture().SetFilter(deviceName);
             _pipeline.EnableImage(PXCMImage.ColorFormat.COLOR_FORMAT_RGB24);
             _pipeline.EnableImage(PXCMImage.ColorFormat.COLOR_FORMAT_VERTICES);
+            _pipeline.EnableGesture(gestureModuleName);
             if (!_pipeline.Init())
                 throw new GestureCameraException("Failed to initialize pipeline.");
 
@@ -117,6 +118,12 @@ namespace OculusHand.Models
 
             var color = _pipeline.QueryImage(PXCMImage.ImageType.IMAGE_TYPE_COLOR);
             var depth = _pipeline.QueryImage(PXCMImage.ImageType.IMAGE_TYPE_DEPTH);
+            var gesture = _pipeline.QueryGesture();
+
+            PXCMGesture.Blob blobInfo;
+            GestureCameraUtil.Assert(gesture.QueryBlobData(PXCMGesture.Blob.Label.LABEL_SCENE, 0, out blobInfo), "Failed to query blob data.");
+            PXCMImage blob;
+            GestureCameraUtil.Assert(gesture.QueryBlobImage(PXCMGesture.Blob.Label.LABEL_SCENE, 0, out blob), "Failed to query blob image.");
 
             PXCMImage.ImageData colorData;
             GestureCameraUtil.Assert(
@@ -125,7 +132,11 @@ namespace OculusHand.Models
             PXCMImage.ImageData depthData;
             GestureCameraUtil.Assert(
                 depth.AcquireAccess(PXCMImage.Access.ACCESS_READ, out depthData),
-                "Failed to aquire access on depth image.");
+                "Failed to acquire access on depth image.");
+            PXCMImage.ImageData blobData;
+            GestureCameraUtil.Assert(
+                blob.AcquireAccess(PXCMImage.Access.ACCESS_READ, out blobData),
+                "Failed to acquire access on blob image.");
 
             int colorWidth = (int)color.info.width;
             int colorHeight = (int)color.info.height;
@@ -136,7 +147,11 @@ namespace OculusHand.Models
             var verticies = depthData.ToShortArray(0, 3 * depthWidth * depthHeight);
             var uv = depthData.ToFloatArray(2, 2 * depthWidth * depthHeight);
 
-            var data = new GestureCameraData(depthWidth, depthHeight, colorWidth, colorHeight, colorImage);
+            int blobWidth = (int)blob.info.width;
+            int blobHeight = (int)blob.info.height;
+            var blobImage = blobData.ToByteArray(0, blobWidth * blobHeight);
+
+            var data = new GestureCameraData(depthWidth, depthHeight, colorWidth, colorHeight, colorImage, blobImage);
             for (int j = 0; j < depthHeight; ++j)
                 for (int i = 0; i < depthWidth; ++i)
                 {

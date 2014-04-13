@@ -110,7 +110,7 @@ namespace OculusHand.ViewModels
             {
                 Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
                 var config = Util.GetConfigManager();
-                _camera = new GestureCamera(config.Parameters.DeviceName);
+                _camera = new GestureCamera(config.Parameters.DeviceName, config.Parameters.GestureModuleName);
             }
             catch (GestureCameraException e)
             {

@@ -9,7 +9,7 @@ namespace OculusHand.Models
     {
         Dictionary<Index, Point> _dictionary;
 
-        public GestureCameraData(int width, int height, int textureWidth, int textureHeight, byte[] texture)
+        public GestureCameraData(int width, int height, int textureWidth, int textureHeight, byte[] texture, byte[] blob)
         {
             _dictionary = new Dictionary<Index, Point>();
             Width = width;
@@ -17,6 +17,7 @@ namespace OculusHand.Models
             TextureWidth = textureWidth;
             TextureHeight = textureHeight;
             Texture = texture;
+            Blob = blob;
         }
 
         //////////////////////////////////////////////
@@ -62,7 +63,11 @@ namespace OculusHand.Models
         /// </summary>
         public byte[] Texture { get; private set; }
 
-        //[TODO]カラーイメージも作る
+        /// <summary>
+        /// ブロブ画像を取得します。
+        /// </summary>
+        public byte[] Blob { get; private set; }
+
         #endregion
 
         //////////////////////////////////////////////
@@ -80,7 +85,7 @@ namespace OculusHand.Models
         }
 
         /// <summary>
-        /// 特定の深度画像座標にある点を取得します。対応する座標に点が存在しない場合には例外をすろーします。
+        /// 特定の深度画像座標にある点を取得します。対応する座標に点が存在しない場合には例外をスローします。
         /// </summary>
         /// <param name="x">深度画像X座標</param>
         /// <param name="y">深度画像Y座標</param>

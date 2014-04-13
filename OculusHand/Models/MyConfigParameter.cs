@@ -11,6 +11,7 @@ namespace OculusHand.Models
     public class MyConfigParameter : ConfigParameter
     {
         public string DeviceName { get; set; }
+        public string GestureModuleName { get; set; }
 
         public int BackBufferWidth { get; set; }
         public int BackBufferHeight { get; set; }
@@ -25,6 +26,7 @@ namespace OculusHand.Models
         public override void Initialize()
         {
             DeviceName = "";
+            GestureModuleName = "";
 
             BackBufferWidth = 960;
             BackBufferHeight = 540;
