@@ -30,7 +30,7 @@ namespace OculusHand.ViewModels
         ////////////////////////////////////////////////////
         #region 内部変数
 
-        readonly ColorBGRA _background = SharpDX.Color.White;
+        readonly ColorBGRA _fillColor = SharpDX.Color.White;
 
         Device _device;
         Effect _effect;
@@ -41,6 +41,14 @@ namespace OculusHand.ViewModels
         VertexBuffer _vertexBuffer;
         IndexBuffer _indexBuffer;
         Texture _texture;
+
+        VertexBuffer _surfaceVertexBuffer;
+        IndexBuffer _surfaceIndexBuffer;
+        Texture _background;
+        int _surfaceVertexCount;
+        int _surfaceIndexCount;
+        int _surfaceWidth;
+        int _surfaceHeight;
 
         #endregion
 
@@ -115,10 +123,58 @@ namespace OculusHand.ViewModels
             {
                 setVertices(vertices);
                 setIndices(indices);
-                setTexture(mesh.Texture, mesh.Blob, mesh.TextureWidth, mesh.TextureHeight, mesh.BlobWidth, mesh.BlobHeight, mesh.BackgroundBlob);
+                setTexture(mesh.Texture, mesh.TextureWidth, mesh.TextureHeight);
                 _vertexCount = vertices.Length;
                 _indexCount = indices.Length;
             }
+        }
+
+        /// <summary>
+        /// 背景レンダリングの際に用いる画像の方向を更新します。
+        /// </summary>
+        public void UpdateOrientation()
+        {
+            //シェーダに与える値を変更
+            float[] topLeft = { -0.5f, -0.5f };
+            float[] bottomRight = { 0.5f, 0.5f };
+
+            _effect.SetValue("TopLeftAngle", topLeft);
+            _effect.SetValue("BottomRightAngle", bottomRight);
+        }
+
+        /// <summary>
+        /// 背景画像を更新します。
+        /// </summary>
+        public void UpdateBackground(byte[] color, int width, int height)
+        {
+            if (_background == null ||
+                _background.GetLevelDescription(0).Width != width ||
+                _background.GetLevelDescription(0).Height != height)
+            {
+                if (_background != null)
+                    _background.Dispose();
+
+                _background = new Texture(_device, width, height, 1, Usage.Dynamic, Format.A8R8G8B8, Pool.Default);
+
+                //テクスチャのセット
+                var handle = _effect.GetParameter(null, "BackgroundImage");
+                _effect.SetTexture(handle, _texture);
+            }
+
+            //テクスチャの書き込み
+            var data = _background.LockRectangle(0, LockFlags.None);
+            using (var ds = new DataStream(data.DataPointer, width * height * 4, false, true))
+            {
+                for (int y = 0; y < height; ++y)
+                    for (int x = 0; x < width; ++x)
+                    {
+                        ds.Write(color[(y * width + x) * 3 + 0]); //B
+                        ds.Write(color[(y * width + x) * 3 + 1]); //G
+                        ds.Write(color[(y * width + x) * 3 + 2]); //R
+                        ds.WriteByte(255);                        //A
+                    }
+            }
+            _background.UnlockRectangle(0);
         }
 
         /// <summary>
@@ -127,7 +183,16 @@ namespace OculusHand.ViewModels
         /// <param name="matrix">平行回転行列の値</param>
         public void UpdateMatrix(Matrix3D matrix)
         {
-            setMatrix(matrix);
+            if (!matrix.HasInverse)
+                return;
+
+            matrix.Invert();    //なんか反転しなくちゃダメだった？
+
+            float[] mat = { (float)matrix.M11,      (float)matrix.M12,      (float)matrix.M13,      (float)matrix.M14, 
+                            (float)matrix.M21,      (float)matrix.M22,      (float)matrix.M23,      (float)matrix.M24, 
+                            (float)matrix.M31,      (float)matrix.M32,      (float)matrix.M33,      (float)matrix.M34, 
+                            (float)matrix.OffsetX,  (float)matrix.OffsetY,  (float)matrix.OffsetZ,  (float)matrix.M44, };
+            _effect.SetValue("Transform", mat);
         }
 
         /// <summary>
@@ -135,7 +200,7 @@ namespace OculusHand.ViewModels
         /// </summary>
         public void Render()
         {
-            render(_background);
+            render(_fillColor);
         }
         #endregion
 
@@ -166,12 +231,16 @@ namespace OculusHand.ViewModels
             //デバイスの作成
             _device = new Device(new Direct3DEx(), 0, DeviceType.Hardware, IntPtr.Zero, CreateFlags.HardwareVertexProcessing | CreateFlags.Multithreaded, pp);
             _device.VertexFormat = Vertex.Format;
-            _device.SetRenderState(RenderState.FillMode, FillMode.Solid);
 
             //エフェクトの作成
             _effect = Effect.FromFile(_device, "Mesh.fx", ShaderFlags.OptimizationLevel3);
             _effect.Technique = "Mesh";
             _effect.SetValue("Transform", Matrix.Identity);
+
+            //背景描画用のメッシュの作成
+            _surfaceVertexBuffer = new VertexBuffer(_device, backBufferWidth * backBufferHeight * Marshal.SizeOf(typeof(Vertex)), Usage.WriteOnly, Vertex.Format, Pool.Default);
+            _surfaceIndexBuffer = new IndexBuffer(_device, backBufferWidth * backBufferHeight * Marshal.SizeOf(typeof(int)), Usage.WriteOnly, Pool.Default, false);
+            makeSurface(backBufferWidth, backBufferHeight);
         }
 
         void releaseDirect3D()
@@ -188,6 +257,15 @@ namespace OculusHand.ViewModels
                 _texture.Dispose();
         }
 
+        void makeSurface(int width, int height)
+        {
+            var vst = _surfaceVertexBuffer.Lock(0, width * height * Marshal.SizeOf(typeof(Vertex)), LockFlags.None);
+            //for (int y = 0; y < height; ++y)
+            //    for (int x = 0; x < width; ++x)
+            //        new Vertex(
+            _surfaceVertexBuffer.Unlock();
+        }
+
         void setIndices(int[] arr)
         {
             //インデックスバッファの作成
@@ -195,7 +273,6 @@ namespace OculusHand.ViewModels
             if (_indexBuffer == null || _indexCount < arr.Length)
             {
                 _indexBuffer = new IndexBuffer(_device, size * arr.Length, Usage.WriteOnly | Usage.Dynamic, Pool.Default, false);
-                _device.Indices = _indexBuffer;
             }
 
             var st = _indexBuffer.Lock(0, size * arr.Length, LockFlags.None);
@@ -210,7 +287,6 @@ namespace OculusHand.ViewModels
             if (_vertexBuffer == null || _vertexCount < arr.Length)
             {
                 _vertexBuffer = new VertexBuffer(_device, size * arr.Length, Usage.WriteOnly | Usage.Dynamic, Vertex.Format, Pool.Default);
-                _device.SetStreamSource(0, _vertexBuffer, 0, Marshal.SizeOf(typeof(Vertex)));
             }
 
             var st = _vertexBuffer.Lock(0, size * arr.Length, LockFlags.None);
@@ -218,7 +294,7 @@ namespace OculusHand.ViewModels
             _vertexBuffer.Unlock();
         }
 
-        void setTexture(byte[] color, byte[] blob, int width, int height, int blobWidth, int blobHeight, byte backgroundBlob)
+        void setTexture(byte[] color, int width, int height)
         {
             if (_texture == null || 
                 _texture.GetLevelDescription(0).Width != width || 
@@ -227,7 +303,7 @@ namespace OculusHand.ViewModels
                 if (_texture != null)
                     _texture.Dispose();
 
-                _texture = new Texture(_device, width, height, 1, Usage.Dynamic, Format.A8R8G8B8, Pool.Default); //エラーが出る
+                _texture = new Texture(_device, width, height, 1, Usage.Dynamic, Format.A8R8G8B8, Pool.Default);
 
                 //テクスチャのセット
                 var handle = _effect.GetParameter(null, "HandTexture");
@@ -238,20 +314,13 @@ namespace OculusHand.ViewModels
             var data = _texture.LockRectangle(0, LockFlags.None);
             using (var ds = new DataStream(data.DataPointer, width * height * 4, false, true))
             {
-                double scaleW = (double)blobWidth / width;
-                double scaleH = (double)blobHeight / height;
                 for (int y = 0; y < height; ++y)
                     for (int x = 0; x < width; ++x)
                     {
                         ds.Write(color[(y * width + x) * 3 + 0]); //B
                         ds.Write(color[(y * width + x) * 3 + 1]); //G
                         ds.Write(color[(y * width + x) * 3 + 2]); //R
-
-                        //A
-                        if (blob[(int)(y * scaleH) * blobWidth + (int)(x * scaleW)] == backgroundBlob)
-                            ds.WriteByte(0);
-                        else
-                            ds.WriteByte(255);
+                        ds.WriteByte(255);                        //A
                     }
             }
             _texture.UnlockRectangle(0);
@@ -266,6 +335,36 @@ namespace OculusHand.ViewModels
             _device.BeginScene();
             _effect.Begin();
 
+            drawBackground();
+            drawHand();
+
+            _effect.End();
+            _device.EndScene();
+
+            ImageSource.AddDirtyRect(new Int32Rect(0, 0, ImageSource.PixelWidth, ImageSource.PixelHeight));
+            ImageSource.Unlock();
+        }
+
+        void drawBackground()
+        {
+            _device.SetStreamSource(0, _surfaceVertexBuffer, 0, Marshal.SizeOf(typeof(Vertex)));
+            _device.Indices = _surfaceIndexBuffer;
+
+            _device.SetRenderState(RenderState.FillMode, FillMode.Solid);
+            _effect.BeginPass(3);
+            _device.DrawIndexedPrimitive(PrimitiveType.TriangleList, 0, 0, _surfaceVertexCount, 0, _surfaceIndexCount / 3);
+            _effect.EndPass();
+        }
+
+        void drawHand()
+        {
+            if (_vertexBuffer == null || _indexBuffer == null)
+                return;
+
+            _device.SetStreamSource(0, _vertexBuffer, 0, Marshal.SizeOf(typeof(Vertex)));
+            _device.Indices = _indexBuffer;
+
+            //Mesh 
             _device.SetRenderState(RenderState.FillMode, FillMode.Solid);
             _effect.BeginPass(0);
             if (0 < _vertexCount && 0 < _indexCount)
@@ -275,34 +374,15 @@ namespace OculusHand.ViewModels
                 }
             _effect.EndPass();
 
-            _device.SetRenderState(RenderState.FillMode, FillMode.Wireframe);
-            _effect.BeginPass(1);
-            if (0 < _vertexCount && 0 < _indexCount)
-                lock (_bufferUpdateLock)
-                {
-                    _device.DrawIndexedPrimitive(PrimitiveType.TriangleList, 0, 0, _vertexCount, 0, _indexCount / 3);
-                }
-            _effect.EndPass();
-
-            _effect.End();
-            _device.EndScene();
-
-            ImageSource.AddDirtyRect(new Int32Rect(0, 0, ImageSource.PixelWidth, ImageSource.PixelHeight));
-            ImageSource.Unlock();
-        }
-
-        void setMatrix(Matrix3D matrix)
-        {
-            if (!matrix.HasInverse)
-                return;
-
-            matrix.Invert();    //なんか反転しなくちゃダメだった？
-
-            float[] mat = { (float)matrix.M11,      (float)matrix.M12,      (float)matrix.M13,      (float)matrix.M14, 
-                            (float)matrix.M21,      (float)matrix.M22,      (float)matrix.M23,      (float)matrix.M24, 
-                            (float)matrix.M31,      (float)matrix.M32,      (float)matrix.M33,      (float)matrix.M34, 
-                            (float)matrix.OffsetX,  (float)matrix.OffsetY,  (float)matrix.OffsetZ,  (float)matrix.M44, };
-            _effect.SetValue("Transform", mat);
+            //Wire frame
+            //_device.SetRenderState(RenderState.FillMode, FillMode.Wireframe);
+            //_effect.BeginPass(1);
+            //if (0 < _vertexCount && 0 < _indexCount)
+            //    lock (_bufferUpdateLock)
+            //    {
+            //        _device.DrawIndexedPrimitive(PrimitiveType.TriangleList, 0, 0, _vertexCount, 0, _indexCount / 3);
+            //    }
+            //_effect.EndPass();
         }
 
         /// <summary>

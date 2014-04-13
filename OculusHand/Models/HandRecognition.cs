@@ -51,15 +51,8 @@ namespace OculusHand.Models
             mesh.TextureHeight = data.TextureHeight;
             mesh.Texture = data.Texture;
 
-            mesh.BlobWidth = data.Width;
-            mesh.BlobHeight = data.Height;
-            mesh.Blob = data.Blob;
-            mesh.BackgroundBlob = BackgroundBlob;
-
             //頂点の追加
-            var delaunay = new Subdiv2D();
-            delaunay.InitDelaunay(new Rect(0, 0, data.Width, data.Height));
-            var indexDictionary = new Dictionary<Point2f, int>();
+            var indexMap = new Nullable<int>[data.Width, data.Height];
             int index = 0;
             for (int y = 0; y < data.Height; ++y)
                 for (int x = 0; x < data.Width; ++x)
@@ -75,45 +68,51 @@ namespace OculusHand.Models
                         if (MaxDepth < point.Z)
                             continue;
 
-                        var p = new Point2f(x, y);
-                        delaunay.Insert(p);
-                        indexDictionary[p] = index;
+                        indexMap[x, y] = index;
                         mesh.AddPoint(point);
                         ++index;
                     }
                 }
 
-            //ドロネー三角形分割でインデックス列を作成
-            var triangles = delaunay.GetTriangleList();
-            foreach (var triangle in triangles)
-            {
-                var points = new Point2f[3];
-                bool skip = false;
-                for (int i = 0; i < 3; ++i)
+            //メッシュインデックスの作成
+            //メッシュを構成する頂点が密であることが前提
+            for (int y = 1; y < data.Height - 1; ++y)
+                for (int x = 1; x < data.Width - 1; ++x)
                 {
-                    float x = triangle[i * 2];
-                    float y = triangle[i * 2 + 1];
-                    if (x < 0 || data.Width <= x || y < 0 || data.Height <= y)
+                    //頂点が存在する場合は左上と右下に三角形をつくろうとする
+                    if (indexMap[x, y].HasValue)
                     {
-                        skip = true;
-                        break;
+                        int center = indexMap[x, y].Value;
+
+                        if (indexMap[x - 1, y].HasValue &&
+                            indexMap[x, y - 1].HasValue)
+                            mesh.AddIndices(new int[] { indexMap[x - 1, y].Value,
+                                                        indexMap[x, y - 1].Value, 
+                                                        center });
+                        if (indexMap[x + 1, y].HasValue &&
+                            indexMap[x, y + 1].HasValue)
+                            mesh.AddIndices(new int[] { center, 
+                                                        indexMap[x + 1, y].Value, 
+                                                        indexMap[x, y + 1].Value });
                     }
+                    //頂点が存在しない場合は1マスあけた左下と右上に三角形をつくろうとする
+                    else
+                    {
+                        if (indexMap[x - 1, y].HasValue &&
+                            indexMap[x, y + 1].HasValue &&
+                            indexMap[x - 1, y + 1].HasValue)
+                            mesh.AddIndices(new int[] { indexMap[x - 1, y].Value, 
+                                                        indexMap[x, y + 1].Value, 
+                                                        indexMap[x - 1, y + 1].Value});
 
-                    points[i] = new Point2f(x, y);
+                        if (indexMap[x + 1, y].HasValue &&
+                            indexMap[x, y - 1].HasValue && 
+                            indexMap[x + 1, y - 1].HasValue)
+                            mesh.AddIndices(new int[] { indexMap[x + 1, y].Value, 
+                                                        indexMap[x, y - 1].Value, 
+                                                        indexMap[x + 1, y - 1].Value});
+                    }
                 }
-
-                if (skip)
-                    continue;
-
-                //3頂点の深度画像座標の重心を切り捨ててfalseのインデックスになったら飛ばす
-                //var center = (points[0] + points[1] + points[2]);
-                //center.X /= 3;
-                //center.Y /= 3;
-                //if (data.Blob[data.Width * (int)center.Y + (int)center.X] != HandBlob)
-                //    continue;
-
-                mesh.AddIndices(points.Select(p => indexDictionary[p]));
-            }
 
             return mesh;
         }
