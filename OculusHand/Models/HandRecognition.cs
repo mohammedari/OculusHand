@@ -13,7 +13,7 @@ namespace OculusHand.Models
         #region Properties
 
         public double MaxDepth { get; private set; }
-        public byte HandBlob { get; private set; }
+        public byte BackgroundBlob { get; private set; }
 
         public Mesh Mesh { get; private set; }
 
@@ -25,8 +25,10 @@ namespace OculusHand.Models
         public HandRecognition()
         {
             //[TODO]パラメータをコンフィグから設定するようにする
-            MaxDepth = 0.8;
-            HandBlob = 0;
+            MaxDepth = 0.5;
+
+            //[TODO]BackgroundBlobはGestureCameraから取得するようにする
+            BackgroundBlob = 255;
         }
 
         /// <summary>
@@ -44,9 +46,15 @@ namespace OculusHand.Models
         Mesh extractHandMesh(GestureCameraData data)
         {
             var mesh = new Mesh();
+
             mesh.TextureWidth = data.TextureWidth;
             mesh.TextureHeight = data.TextureHeight;
             mesh.Texture = data.Texture;
+
+            mesh.BlobWidth = data.Width;
+            mesh.BlobHeight = data.Height;
+            mesh.Blob = data.Blob;
+            mesh.BackgroundBlob = BackgroundBlob;
 
             //頂点の追加
             var delaunay = new Subdiv2D();
@@ -56,8 +64,8 @@ namespace OculusHand.Models
             for (int y = 0; y < data.Height; ++y)
                 for (int x = 0; x < data.Width; ++x)
                 {
-                    //手領域以外は無視
-                    if (data.Blob[data.Width * y + x] != HandBlob)
+                    //背景領域は無視
+                    if (data.Blob[data.Width * y + x] == BackgroundBlob)
                         continue;
 
                     Point point;
@@ -98,11 +106,11 @@ namespace OculusHand.Models
                     continue;
 
                 //3頂点の深度画像座標の重心を切り捨ててfalseのインデックスになったら飛ばす
-                var center = (points[0] + points[1] + points[2]);
-                center.X /= 3;
-                center.Y /= 3;
-                if (data.Blob[data.Width * (int)center.Y + (int)center.X] != HandBlob)
-                    continue;
+                //var center = (points[0] + points[1] + points[2]);
+                //center.X /= 3;
+                //center.Y /= 3;
+                //if (data.Blob[data.Width * (int)center.Y + (int)center.X] != HandBlob)
+                //    continue;
 
                 mesh.AddIndices(points.Select(p => indexDictionary[p]));
             }

@@ -47,6 +47,26 @@ namespace OculusHand.Models
         /// </summary>
         public byte[] Texture { get; set; }
 
+        /// <summary>
+        /// ブロブ画像の幅を取得します。
+        /// </summary>
+        public int BlobWidth { get; set; }
+
+        /// <summary>
+        /// ブロブ画像の高さを取得します。
+        /// </summary>
+        public int BlobHeight { get; set; }
+
+        /// <summary>
+        /// ブロブ画像を取得します。
+        /// </summary>
+        public byte[] Blob { get; set; }
+
+        /// <summary>
+        /// ブロブ画像中の背景に対応する値
+        /// </summary>
+        public byte BackgroundBlob { get; set; }
+
         /////////////////////////////////////////////
         
         /// <summary>

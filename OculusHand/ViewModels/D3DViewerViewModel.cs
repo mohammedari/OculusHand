@@ -115,7 +115,7 @@ namespace OculusHand.ViewModels
             {
                 setVertices(vertices);
                 setIndices(indices);
-                setTexture(mesh.Texture, mesh.TextureWidth, mesh.TextureHeight);
+                setTexture(mesh.Texture, mesh.Blob, mesh.TextureWidth, mesh.TextureHeight, mesh.BlobWidth, mesh.BlobHeight, mesh.BackgroundBlob);
                 _vertexCount = vertices.Length;
                 _indexCount = indices.Length;
             }
@@ -155,7 +155,7 @@ namespace OculusHand.ViewModels
                 BackBufferCount = 2,
                 BackBufferWidth = backBufferWidth,
                 BackBufferHeight = backBufferHeight,
-                BackBufferFormat = Format.X8R8G8B8,
+                BackBufferFormat = Format.A8R8G8B8,
 
                 PresentationInterval = PresentInterval.One,
                 PresentFlags = PresentFlags.None,
@@ -218,7 +218,7 @@ namespace OculusHand.ViewModels
             _vertexBuffer.Unlock();
         }
 
-        void setTexture(byte[] arr, int width, int height)
+        void setTexture(byte[] color, byte[] blob, int width, int height, int blobWidth, int blobHeight, byte backgroundBlob)
         {
             if (_texture == null || 
                 _texture.GetLevelDescription(0).Width != width || 
@@ -238,13 +238,21 @@ namespace OculusHand.ViewModels
             var data = _texture.LockRectangle(0, LockFlags.None);
             using (var ds = new DataStream(data.DataPointer, width * height * 4, false, true))
             {
-                for (int i = 0; i < width * height; ++i)
-                {
-                    ds.Write(arr[i * 3 + 0]); //B
-                    ds.Write(arr[i * 3 + 1]); //G
-                    ds.Write(arr[i * 3 + 2]); //R
-                    ds.WriteByte(255);        //A
-                }
+                double scaleW = (double)blobWidth / width;
+                double scaleH = (double)blobHeight / height;
+                for (int y = 0; y < height; ++y)
+                    for (int x = 0; x < width; ++x)
+                    {
+                        ds.Write(color[(y * width + x) * 3 + 0]); //B
+                        ds.Write(color[(y * width + x) * 3 + 1]); //G
+                        ds.Write(color[(y * width + x) * 3 + 2]); //R
+
+                        //A
+                        if (blob[(int)(y * scaleH) * blobWidth + (int)(x * scaleW)] == backgroundBlob)
+                            ds.WriteByte(0);
+                        else
+                            ds.WriteByte(255);
+                    }
             }
             _texture.UnlockRectangle(0);
         }
@@ -267,14 +275,14 @@ namespace OculusHand.ViewModels
                 }
             _effect.EndPass();
 
-            //_device.SetRenderState(RenderState.FillMode, FillMode.Wireframe);
-            //_effect.BeginPass(1);
-            //if (0 < _vertexCount && 0 < _indexCount)
-            //    lock (_bufferUpdateLock)
-            //    {
-            //        _device.DrawIndexedPrimitive(PrimitiveType.TriangleList, 0, 0, _vertexCount, 0, _indexCount / 3);
-            //    }
-            //_effect.EndPass();
+            _device.SetRenderState(RenderState.FillMode, FillMode.Wireframe);
+            _effect.BeginPass(1);
+            if (0 < _vertexCount && 0 < _indexCount)
+                lock (_bufferUpdateLock)
+                {
+                    _device.DrawIndexedPrimitive(PrimitiveType.TriangleList, 0, 0, _vertexCount, 0, _indexCount / 3);
+                }
+            _effect.EndPass();
 
             _effect.End();
             _device.EndScene();
