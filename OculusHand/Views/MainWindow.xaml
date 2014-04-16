@@ -35,11 +35,13 @@
     </i:Interaction.Triggers>
     
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="auto"/>
-        </Grid.RowDefinitions>
         <v:D3DViewer Mesh="{Binding Mesh}"/>
-        <Label Grid.Row="1" Content="{Binding ErrorMessage}" Foreground="Red" HorizontalAlignment="Right"/>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="auto"/>
+            </Grid.RowDefinitions>
+            <Label Grid.Row="1" Content="{Binding ErrorMessage}" Foreground="Red" HorizontalAlignment="Right"/>
+        </Grid>
     </Grid>
 </Window>

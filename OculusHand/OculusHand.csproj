@@ -211,7 +211,6 @@
     <Content Include="InfrastructureAssemblies\libpxcclr.dll" />
     <Content Include="InfrastructureAssemblies\Livet.dll" />
     <Content Include="InfrastructureAssemblies\Livet.XML" />
-    <Content Include="InfrastructureAssemblies\MIConvexHullPlugin.dll" />
     <Content Include="msvcp100.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -275,7 +274,6 @@
     <Content Include="opencv_videostab248.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Resource Include="InfrastructureAssemblies\MIConvexHullPlugin.xml" />
     <Content Include="InfrastructureAssemblies\Microsoft.Expression.Interactions.dll" />
     <Content Include="InfrastructureAssemblies\System.Windows.Interactivity.dll" />
     <Content Include="OpenCvSharpExtern.dll">
