@@ -25,6 +25,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <DebugType>pdbonly</DebugType>
@@ -152,6 +153,8 @@
     <Compile Include="Models\HandRecognition.cs" />
     <Compile Include="Models\Mesh.cs" />
     <Compile Include="Models\MyConfigParameter.cs" />
+    <Compile Include="Models\OculusRift.cs" />
+    <Compile Include="Models\OculusRiftException.cs" />
     <Compile Include="Models\Point.cs" />
     <Compile Include="Models\Util.cs" />
     <Compile Include="ViewModels\D3DViewerViewModel.cs" />
@@ -194,6 +197,9 @@
     <AppDesigner Include="Properties\" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="RiftWrapper.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Resource Include="Images\VrPlayerSample.jpg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>

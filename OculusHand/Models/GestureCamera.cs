@@ -26,7 +26,7 @@ namespace OculusHand.Models
         /// <summary>
         /// Event which is raised when a new frame arrived.
         /// </summary>
-        public EventHandler<OnUpdatedEventArgs> OnUpdated { get; set; }
+        public event EventHandler<OnUpdatedEventArgs> OnUpdated;
 
         /// <summary>
         /// True if image aquisition loop is active.

@@ -107,12 +107,47 @@ namespace OculusHand.Views
             );
 
         //依存関係プロパティが更新されると、VMに点群の更新を通知します。
-        private static void onPointsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        static void onPointsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            D3DViewer viewer = d as D3DViewer;
-            if (viewer != null && e.NewValue != null)
-                viewer.ViewModel.UpdateMesh((Mesh)e.NewValue);
+            var viewer = d as D3DViewer;
+            var value = e.NewValue as Mesh;
+            if (viewer != null && value != null)
+                viewer.ViewModel.UpdateMesh(value);
         }
+
+        /// <summary>
+        /// 背景画像の向きです。
+        /// </summary>
+        [Bindable(true)]
+        public Matrix3D Orientation
+        {
+            get { return (Matrix3D)GetValue(OrientationProperty); }
+            set { SetValue(OrientationProperty, value); }
+        }
+
+        /// <summary>
+        /// 背景画像の向きの依存関係プロパティです。
+        /// </summary>
+        public static readonly DependencyProperty OrientationProperty =
+            DependencyProperty.Register(
+                "Orientation", 
+                typeof(Matrix3D), 
+                typeof(D3DViewer), 
+                new FrameworkPropertyMetadata(
+                    Matrix3D.Identity, 
+                    FrameworkPropertyMetadataOptions.AffectsRender, 
+                    new PropertyChangedCallback(onOrientationChanged)
+                )
+            );
+
+        //依存関係プロパティが更新されると、VMに背景画像の向きの更新を通知します。
+        static void onOrientationChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            var viewer = d as D3DViewer;
+            if (viewer != null && e.NewValue is Matrix3D)
+                viewer.ViewModel.UpdateOrientation((Matrix3D)e.NewValue);
+        }
+
         #endregion
     }
 }

@@ -51,7 +51,7 @@ namespace OculusHand.ViewModels
         //[TODO]パラメータで設定できるように
         int SurfaceResolutionWidth = 80;
         int SurfaceResolutionHeight = 45;
-        float ThetaMappingDepth = 1f;
+        float ThetaMappingDepth = 1f; //FOV90度なので1.0でOK
 
         #endregion
 
@@ -137,11 +137,6 @@ namespace OculusHand.ViewModels
         /// </summary>
         public void UpdateOrientation(Matrix3D matrix)
         {
-            if (!matrix.HasInverse)
-                return;
-
-            matrix.Invert();    //なんか反転しなくちゃダメだった？
-
             float[] mat = { (float)matrix.M11,      (float)matrix.M12,      (float)matrix.M13,      (float)matrix.M14, 
                             (float)matrix.M21,      (float)matrix.M22,      (float)matrix.M23,      (float)matrix.M24, 
                             (float)matrix.M31,      (float)matrix.M32,      (float)matrix.M33,      (float)matrix.M34, 
@@ -178,9 +173,6 @@ namespace OculusHand.ViewModels
                             (float)matrix.M31,      (float)matrix.M32,      (float)matrix.M33,      (float)matrix.M34, 
                             (float)matrix.OffsetX,  (float)matrix.OffsetY,  (float)matrix.OffsetZ,  (float)matrix.M44, };
             _effect.SetValue("Transform", mat);
-
-            //[TODO]Debug
-            UpdateOrientation(matrix);
         }
 
         /// <summary>

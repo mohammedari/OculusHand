@@ -7,7 +7,7 @@ matrix OculusOrientation;	//Oculus‚Ì‹ü•ûŒü‰ñ“]s—ñ
 
 float ThetaMappingDepth;
 
-static const float PI = 3.14159265f;
+static const float PI = 3.14159265358979323846264;
 
 texture HandTexture : TEXTURE0;
 sampler2D HandSampler = sampler_state

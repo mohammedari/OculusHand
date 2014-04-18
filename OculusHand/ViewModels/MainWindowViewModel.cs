@@ -21,13 +21,16 @@ namespace OculusHand.ViewModels
     public class MainWindowViewModel : ViewModel
     {
         GestureCamera _camera = null;
+        OculusRift _oculus;
         HandRecognition _hand;
 
         public void Initialize()
         {
-            initializeCamera();
-                
             var config = Util.GetConfigManager();
+            initializeCamera(config.Parameters.DeviceName, config.Parameters.GestureModuleName);
+
+            _oculus = new OculusRift();
+            _oculus.OnUpdated += new EventHandler<Matrix3D>((o, e) => { Orientation = e; });
 
             //[TODO]パラメータをセット
             _hand = new HandRecognition();
@@ -58,6 +61,25 @@ namespace OculusHand.ViewModels
             }
         }
         #endregion
+
+
+        #region Orientation変更通知プロパティ
+        private Matrix3D _Orientation;
+
+        public Matrix3D Orientation
+        {
+            get
+            { return _Orientation; }
+            set
+            { 
+                if (_Orientation == value)
+                    return;
+                _Orientation = value;
+                RaisePropertyChanged("Orientation");
+            }
+        }
+        #endregion
+
 
         #region ErrorMessage変更通知プロパティ
         private string _ErrorMessage;
@@ -103,14 +125,13 @@ namespace OculusHand.ViewModels
             }
         }
 
-        bool initializeCamera()
+        bool initializeCamera(string device, string module)
         {
             disposeCamera();
             try
             {
                 Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
-                var config = Util.GetConfigManager();
-                _camera = new GestureCamera(config.Parameters.DeviceName, config.Parameters.GestureModuleName);
+                _camera = new GestureCamera(device, module);
             }
             catch (GestureCameraException e)
             {
@@ -157,6 +178,7 @@ namespace OculusHand.ViewModels
 
                 base.Dispose();
                 disposeCamera();
+                _oculus.Dispose();
             }
         }
         #endregion
