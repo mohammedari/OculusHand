@@ -44,7 +44,7 @@ namespace OculusHand.Models
                 throw new OculusRiftException("Failed to acquire Oculus Rift orientation.");
 
             var mat = Matrix3D.Identity;
-            mat.Rotate(new Quaternion(x, y, z, -w));
+            mat.Rotate(new Quaternion(x, y, -z, -w));
             RaiseOnUpdated(mat);
         }
 
