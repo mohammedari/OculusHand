@@ -180,7 +180,9 @@ namespace OculusHand.ViewModels
 
             //matrix.Invert();    //なんか反転しなくちゃダメだった？
 
+            //[TODO]マウスでの回転を全面禁止にして、コンフィグから設定するようにする
             matrix = Matrix3D.Identity;
+            matrix.Rotate(new System.Windows.Media.Media3D.Quaternion(new Vector3D(1, 0, 0), -5));
             matrix.OffsetY = -0.15;
             matrix.Scale(new Vector3D(2, 2, 2));
 
