@@ -64,6 +64,7 @@ namespace OculusHand.Views
         #endregion
 
         ///////////////////////////////////////////////
+
         #region Points依存関係プロパティ
         /// <summary>
         /// 表示する点群データです。
@@ -99,6 +100,9 @@ namespace OculusHand.Views
                 viewer.ViewModel.UpdateMesh(value);
         }
 
+        #endregion
+
+        #region Orientation依存関係プロパティ
         /// <summary>
         /// 背景画像の向きです。
         /// </summary>
@@ -132,6 +136,10 @@ namespace OculusHand.Views
                 viewer.ViewModel.UpdateOrientation((Matrix3D)e.NewValue);
         }
 
+        #endregion
+
+        #region OculusDistortionParameter依存関係プロパティ
+
         /// <summary>
         /// OculusのためのDistortion向けのパラメータです。
         /// </summary>
@@ -163,7 +171,44 @@ namespace OculusHand.Views
                 viewer.ViewModel.UpdateDistortionParameter(value);
         }
 
-
         #endregion
+
+        #region BackgroundImagePath依存関係プロパティ
+        /// <summary>
+        /// 背景画像のパスです。
+        /// </summary>
+        public string BackgroundImagePath
+        {
+            get { return (string)GetValue(BackgroundImagePathProperty); }
+            set { SetValue(BackgroundImagePathProperty, value); }
+        }
+
+        /// <summary>
+        /// 背景画像のパスの依存関係プロパティです。
+        /// </summary>
+        public static readonly DependencyProperty BackgroundImagePathProperty =
+            DependencyProperty.Register(
+                "BackgroundImagePath", 
+                typeof(string), 
+                typeof(D3DViewer), 
+                new FrameworkPropertyMetadata(
+                    "",
+                    FrameworkPropertyMetadataOptions.AffectsRender, 
+                    new PropertyChangedCallback(onBackgroundImagePathUpdated)));
+
+        /// <summary>
+        /// 依存関係プロパティが更新されると、VMにパラメータの更新を通知します。
+        /// </summary>
+        /// <param name="d"></param>
+        /// <param name="e"></param>
+        static void onBackgroundImagePathUpdated(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            var viewer = d as D3DViewer;
+            var value = e.NewValue as string;
+            if (viewer != null && value != null)
+                viewer.ViewModel.UpdateBackground(value);
+        }
+        #endregion
+
     }
 }

@@ -9,7 +9,7 @@ namespace OculusHand.Models
     {
         Point[,] _dictionary;
 
-        public GestureCameraData(int width, int height, int textureWidth, int textureHeight, byte[] texture, byte[] blob)
+        public GestureCameraData(int width, int height, int textureWidth, int textureHeight, byte[] texture, byte[] blob, uint blobBackground)
         {
             _dictionary = new Point[width, height];
             Width = width;
@@ -18,6 +18,7 @@ namespace OculusHand.Models
             TextureHeight = textureHeight;
             Texture = texture;
             Blob = blob;
+            BlobBackground = blobBackground;
         }
 
         //////////////////////////////////////////////
@@ -52,6 +53,11 @@ namespace OculusHand.Models
         /// ブロブ画像を取得します。
         /// </summary>
         public byte[] Blob { get; private set; }
+
+        /// <summary>
+        /// 背景のブロブ画像の値を取得します。
+        /// </summary>
+        public uint BlobBackground { get; private set; }
 
         #endregion
 

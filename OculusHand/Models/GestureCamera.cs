@@ -151,7 +151,7 @@ namespace OculusHand.Models
             int blobHeight = (int)blob.info.height;
             var blobImage = blobData.ToByteArray(0, blobWidth * blobHeight);
 
-            var data = new GestureCameraData(depthWidth, depthHeight, colorWidth, colorHeight, colorImage, blobImage);
+            var data = new GestureCameraData(depthWidth, depthHeight, colorWidth, colorHeight, colorImage, blobImage, blobInfo.labelBackground);
             for (int j = 0; j < depthHeight; ++j)
                 for (int i = 0; i < depthWidth; ++i)
                 {

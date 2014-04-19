@@ -10,8 +10,8 @@ namespace OculusHand.Models
         //////////////////////////////////////////////
         #region Properties
 
-        public double MaxDepth { get; private set; }
-        public byte BackgroundBlob { get; private set; }
+        public float MaxDepth { get; private set; }
+        public float MaxDepthGap { get; private set; }
         public int Skip { get; private set; }
 
         public Mesh Mesh { get; private set; }
@@ -21,14 +21,11 @@ namespace OculusHand.Models
         //////////////////////////////////////////////
         #region Public Methods
 
-        public HandRecognition()
+        public HandRecognition(float maxDepth, float maxDepthGap, int skip)
         {
-            //[TODO]パラメータをコンフィグから設定するようにする
-            MaxDepth = 0.5;
-            Skip = 1;
-
-            //[TODO]BackgroundBlobはGestureCameraから取得するようにする
-            BackgroundBlob = 255;
+            MaxDepth = maxDepth;
+            MaxDepthGap = maxDepthGap;
+            Skip = skip;
         }
 
         /// <summary>
@@ -53,12 +50,13 @@ namespace OculusHand.Models
 
             //頂点の追加
             var indexMap = new int[data.Width, data.Height];
+            var depthMap = new float[data.Width, data.Height];
             int index = 0;
             for (int y = 0; y < data.Height; y += Skip)
                 for (int x = 0; x < data.Width; x += Skip)
                 {
                     //背景領域は無視
-                    if (data.Blob[data.Width * y + x] == BackgroundBlob)
+                    if (data.Blob[data.Width * y + x] == data.BlobBackground)
                     {
                         indexMap[x, y] = -1;
                         continue;
@@ -75,6 +73,7 @@ namespace OculusHand.Models
                         }
 
                         indexMap[x, y] = index;
+                        depthMap[x, y] = point.Z;
                         mesh.AddPoint(point);
                         ++index;
                     }
@@ -94,13 +93,15 @@ namespace OculusHand.Models
                     {
                         int center = indexMap[x, y];
 
-                        if (indexMap[x - Skip, y] != -1 &&
-                            indexMap[x, y - Skip] != -1)
+                        if (indexMap[x - Skip, y] != -1 && Math.Abs(depthMap[x - Skip, y] - depthMap[x, y]) < MaxDepthGap &&
+                            indexMap[x, y - Skip] != -1 && Math.Abs(depthMap[x, y - Skip] - depthMap[x, y]) < MaxDepthGap &&
+                                                           Math.Abs(depthMap[x - Skip, y] - depthMap[x, y - Skip]) < MaxDepthGap)
                             mesh.AddIndices(new int[] { indexMap[x - Skip, y],
                                                         indexMap[x, y - Skip], 
                                                         center });
-                        if (indexMap[x + Skip, y] != -1 &&
-                            indexMap[x, y + Skip] != -1)
+                        if (indexMap[x + Skip, y] != -1 && Math.Abs(depthMap[x + Skip, y] - depthMap[x, y]) < MaxDepthGap &&
+                            indexMap[x, y + Skip] != -1 && Math.Abs(depthMap[x, y + Skip] - depthMap[x, y]) < MaxDepthGap &&
+                                                           Math.Abs(depthMap[x + Skip, y] - depthMap[x, y + Skip]) < MaxDepthGap)
                             mesh.AddIndices(new int[] { center, 
                                                         indexMap[x + Skip, y], 
                                                         indexMap[x, y + Skip] });
@@ -108,16 +109,16 @@ namespace OculusHand.Models
                     //頂点が存在しない場合は1マスあけた左下と右上に三角形をつくろうとする
                     else
                     {
-                        if (indexMap[x - Skip, y] != -1 &&
-                            indexMap[x, y + Skip] != -1 &&
-                            indexMap[x - Skip, y + Skip] != -1)
+                        if (indexMap[x - Skip, y] != -1 && Math.Abs(depthMap[x - Skip, y] - depthMap[x, y + Skip]) < MaxDepthGap &&
+                            indexMap[x, y + Skip] != -1 && Math.Abs(depthMap[x, y + Skip] - depthMap[x - Skip, y + Skip]) < MaxDepthGap &&
+                            indexMap[x - Skip, y + Skip] != -1 && Math.Abs(depthMap[x - Skip, y + Skip] - depthMap[x - Skip, y]) < MaxDepthGap)
                             mesh.AddIndices(new int[] { indexMap[x - Skip, y], 
                                                         indexMap[x, y + Skip], 
                                                         indexMap[x - Skip, y + Skip]});
 
-                        if (indexMap[x + Skip, y] != -1 &&
-                            indexMap[x, y - 1] != -1 &&
-                            indexMap[x + Skip, y - Skip] != -1)
+                        if (indexMap[x + Skip, y] != -1 && Math.Abs(depthMap[x + Skip, y] - depthMap[x, y - Skip]) < MaxDepthGap && 
+                            indexMap[x, y - Skip] != -1 && Math.Abs(depthMap[x, y - Skip] - depthMap[x + Skip, y - Skip]) < MaxDepthGap &&
+                            indexMap[x + Skip, y - Skip] != -1 && Math.Abs(depthMap[x + Skip, y - Skip] - depthMap[x + Skip, y]) < MaxDepthGap)
                             mesh.AddIndices(new int[] { indexMap[x + Skip, y], 
                                                         indexMap[x, y - Skip], 
                                                         indexMap[x + Skip, y - Skip]});

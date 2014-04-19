@@ -35,7 +35,10 @@
     </i:Interaction.Triggers>
     
     <Grid>
-        <v:D3DViewer Mesh="{Binding Mesh}" Orientation="{Binding Orientation}" DistortionParameter="{Binding DistortionParameter}"/>
+        <v:D3DViewer Mesh="{Binding Mesh}" 
+                     Orientation="{Binding Orientation}" 
+                     DistortionParameter="{Binding DistortionParameter}"
+                     BackgroundImagePath="{Binding BackgroundImagePath}"/>
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>

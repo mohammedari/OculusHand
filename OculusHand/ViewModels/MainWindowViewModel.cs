@@ -33,8 +33,12 @@ namespace OculusHand.ViewModels
             DistortionParameter = _oculus.DistortionParameter;
             _oculus.OnUpdated += new EventHandler<Matrix3D>((o, e) => { Orientation = e; });
 
-            //[TODO]パラメータをセット
-            _hand = new HandRecognition();
+            _hand = new HandRecognition(
+                config.Parameters.HandRecognitionMaxDepth, 
+                config.Parameters.HandRecognitionMaxDepthGap, 
+                config.Parameters.HandRecognitionPixelSkip);
+
+            BackgroundImagePath = config.Parameters.BackgroundImagePath;
         }
 
         ~MainWindowViewModel()
@@ -62,7 +66,6 @@ namespace OculusHand.ViewModels
             }
         }
         #endregion
-
 
         #region Orientation変更通知プロパティ
         private Matrix3D _Orientation;
@@ -94,6 +97,23 @@ namespace OculusHand.ViewModels
                     return;
                 _DistortionParameter = value;
                 RaisePropertyChanged("DistortionParameter");
+            }
+        }
+        #endregion
+
+        #region BackgroundImagePath変更通知プロパティ
+        private string _BackgroundImagePath;
+
+        public string BackgroundImagePath
+        {
+            get
+            { return _BackgroundImagePath; }
+            set
+            { 
+                if (_BackgroundImagePath == value)
+                    return;
+                _BackgroundImagePath = value;
+                RaisePropertyChanged("BackgroundImagePath");
             }
         }
         #endregion

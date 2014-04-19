@@ -50,11 +50,6 @@ namespace OculusHand.ViewModels
 
         Texture _distortion;
 
-        //[TODO]パラメータで設定できるように
-        int SurfaceResolutionWidth = 80;
-        int SurfaceResolutionHeight = 45;
-        float ThetaMappingDepth = 1f; //FOV90度なので1.0でOK
-
         #endregion
 
         ////////////////////////////////////////////////////
@@ -90,7 +85,13 @@ namespace OculusHand.ViewModels
             initializeDirect3D(
                 config.Parameters.BackBufferWidth, 
                 config.Parameters.BackBufferHeight, 
-                config.Parameters.PointSize);
+                config.Parameters.DistortionSurfaceResolutionWidth, 
+                config.Parameters.DistortionSurfaceResolutionHeight, 
+                config.Parameters.DistortionThetaMappingDepth, 
+                config.Parameters.CameraPitchAngle, 
+                config.Parameters.CameraOffsetY, 
+                config.Parameters.CameraScale
+                );
         }
 
         ~D3DViewerViewModel()
@@ -101,12 +102,6 @@ namespace OculusHand.ViewModels
 
         ////////////////////////////////////////////////////
         #region Public Methods
-        /// <summary>
-        /// 初期化を行います。
-        /// </summary>
-        public void Initialize()
-        {
-        }
 
         /// <summary>
         /// 現在の点群を破棄して、与えられた点群を表示します。
@@ -181,7 +176,9 @@ namespace OculusHand.ViewModels
         ////////////////////////////////////////////////////
         #region 内部処理の実装
 
-        void initializeDirect3D(int backBufferWidth, int backBufferHeight, float pointSize)
+        void initializeDirect3D(int backBufferWidth, int backBufferHeight, 
+                                int surfaceResolutionWidth, int surfaceResolutionHeight, float thetaMappingDepth,
+                                double cameraPitchAngle, double cameraOffsetY, double cameraScale)
         {
             PresentParameters pp = new PresentParameters()
             {
@@ -214,22 +211,19 @@ namespace OculusHand.ViewModels
             //背景描画用のメッシュの作成
             _surfaceVertexBuffer = new VertexBuffer(_device, backBufferWidth * backBufferHeight * Marshal.SizeOf(typeof(Vertex)), Usage.WriteOnly, Vertex.Format, Pool.Default);
             _surfaceIndexBuffer = new IndexBuffer(_device, backBufferWidth * backBufferHeight * Marshal.SizeOf(typeof(int)), Usage.WriteOnly, Pool.Default, false);
-            makeSurface(SurfaceResolutionWidth, SurfaceResolutionHeight);
-            _effect.SetValue("ThetaMappingDepth", ThetaMappingDepth);
+            makeSurface(surfaceResolutionWidth, surfaceResolutionHeight);
+            _effect.SetValue("ThetaMappingDepth", thetaMappingDepth);
 
             //Barrel Distortion用のテクスチャを作成
             _distortion = new Texture(_device, backBufferWidth, backBufferHeight, 1, Usage.RenderTarget, Format.X8B8G8R8, Pool.Default);
             var handle = _effect.GetParameter(null, "Distortion");
             _effect.SetTexture(handle, _distortion);
 
-            //[TODO]Test
-            UpdateBackground(@"Images\VrPlayerSample.jpg");
-
-            //[TODO]コンフィグから設定するようにする
+            //Handメッシュの座標変換を設定
             var matrix = Matrix3D.Identity;
-            matrix.Rotate(new System.Windows.Media.Media3D.Quaternion(new Vector3D(1, 0, 0), -5));
-            matrix.OffsetY = -0.15;
-            matrix.Scale(new Vector3D(2, 2, 2));
+            matrix.Rotate(new System.Windows.Media.Media3D.Quaternion(new Vector3D(1, 0, 0), cameraPitchAngle));
+            matrix.OffsetY = cameraOffsetY;
+            matrix.Scale(new Vector3D(cameraScale, cameraScale, cameraScale));
 
             float[] mat = { (float)matrix.M11,      (float)matrix.M12,      (float)matrix.M13,      (float)matrix.M14, 
                             (float)matrix.M21,      (float)matrix.M22,      (float)matrix.M23,      (float)matrix.M24, 
