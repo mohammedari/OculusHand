@@ -16,20 +16,14 @@ namespace OculusHand.Models
         public float X;
         public float Y;
         public float Z;
-        public float R;
-        public float G;
-        public float B;
 
-        public Point(float u, float v, float x, float y, float z, float r, float g, float b)
+        public Point(float u, float v, float x, float y, float z)
         {
             U = u;
             V = v;
             X = x;
             Y = y;
             Z = z;
-            R = r;
-            G = g;
-            B = b;
         }
         //////////////////////////////////////////////
         #region 比較演算子の実装
@@ -59,15 +53,13 @@ namespace OculusHand.Models
 
             var other = (Point)obj;
             return U == other.U && V == other.V && 
-                   X == other.X && Y == other.Y && Z == other.Z && 
-                   R == other.R && G == other.G && B == other.B;
+                   X == other.X && Y == other.Y && Z == other.Z;
         }
 
         public override int GetHashCode()
         {
             return U.GetHashCode() ^ V.GetHashCode() ^ 
-                   X.GetHashCode() ^ Y.GetHashCode() ^ Z.GetHashCode() ^
-                   R.GetHashCode() ^ G.GetHashCode() ^ B.GetHashCode(); ;
+                   X.GetHashCode() ^ Y.GetHashCode() ^ Z.GetHashCode();
         }
 
         #endregion
