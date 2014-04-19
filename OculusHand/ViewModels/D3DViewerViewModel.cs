@@ -170,30 +170,6 @@ namespace OculusHand.ViewModels
         }
 
         /// <summary>
-        /// レンダリングの際に用いる行列を更新します。
-        /// </summary>
-        /// <param name="matrix">平行回転行列の値</param>
-        public void UpdateMatrix(Matrix3D matrix)
-        {
-            //if (!matrix.HasInverse)
-            //    return;
-
-            //matrix.Invert();    //なんか反転しなくちゃダメだった？
-
-            //[TODO]マウスでの回転を全面禁止にして、コンフィグから設定するようにする
-            matrix = Matrix3D.Identity;
-            matrix.Rotate(new System.Windows.Media.Media3D.Quaternion(new Vector3D(1, 0, 0), -5));
-            matrix.OffsetY = -0.15;
-            matrix.Scale(new Vector3D(2, 2, 2));
-
-            float[] mat = { (float)matrix.M11,      (float)matrix.M12,      (float)matrix.M13,      (float)matrix.M14, 
-                            (float)matrix.M21,      (float)matrix.M22,      (float)matrix.M23,      (float)matrix.M24, 
-                            (float)matrix.M31,      (float)matrix.M32,      (float)matrix.M33,      (float)matrix.M34, 
-                            (float)matrix.OffsetX,  (float)matrix.OffsetY,  (float)matrix.OffsetZ,  (float)matrix.M44, };
-            _effect.SetValue("Transform", mat);
-        }
-
-        /// <summary>
         /// レンダリングを行います。
         /// </summary>
         public void Render()
@@ -248,6 +224,18 @@ namespace OculusHand.ViewModels
 
             //[TODO]Test
             UpdateBackground(@"Images\VrPlayerSample.jpg");
+
+            //[TODO]コンフィグから設定するようにする
+            var matrix = Matrix3D.Identity;
+            matrix.Rotate(new System.Windows.Media.Media3D.Quaternion(new Vector3D(1, 0, 0), -5));
+            matrix.OffsetY = -0.15;
+            matrix.Scale(new Vector3D(2, 2, 2));
+
+            float[] mat = { (float)matrix.M11,      (float)matrix.M12,      (float)matrix.M13,      (float)matrix.M14, 
+                            (float)matrix.M21,      (float)matrix.M22,      (float)matrix.M23,      (float)matrix.M24, 
+                            (float)matrix.M31,      (float)matrix.M32,      (float)matrix.M33,      (float)matrix.M34, 
+                            (float)matrix.OffsetX,  (float)matrix.OffsetY,  (float)matrix.OffsetZ,  (float)matrix.M44, };
+            _effect.SetValue("Transform", mat);
         }
 
         void releaseDirect3D()

@@ -12,7 +12,6 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-using _3DTools;
 using System.Windows.Media.Media3D;
 using OculusHand.ViewModels;
 using OculusHand.Models;
@@ -34,13 +33,6 @@ namespace OculusHand.Views
     public partial class D3DViewer : UserControl
     {
         ///////////////////////////////////////////////
-        #region 内部変数
-
-        Trackball _trackball;
-
-        #endregion
-
-        ///////////////////////////////////////////////
         #region Public Methods
 
         /// <summary>
@@ -51,14 +43,6 @@ namespace OculusHand.Views
             InitializeComponent();
 
             _viewModel = new D3DViewerViewModel();
-
-            //Trackballの初期化
-            _trackball = new Trackball();
-            _trackball.EventSource = mouseCapture;
-            mouseCapture.MouseMove += (o, e) =>
-                {
-                    ViewModel.UpdateMatrix(_trackball.Transform.Value);
-                };
 
             //レンダリングの設定
             CompositionTarget.Rendering += (o, e) => { ViewModel.Render(); };

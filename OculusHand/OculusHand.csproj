@@ -219,9 +219,8 @@
     <Resource Include="Images\ThetaSample %283%29.jpg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
-    <Content Include="InfrastructureAssemblies\3DTools.dll" />
     <Content Include="InfrastructureAssemblies\Design\Livet.Design.dll" />
-    <Content Include="InfrastructureAssemblies\libpxcclr.dll" />
+    <Content Include="libpxcclr.dll" />
     <Content Include="InfrastructureAssemblies\Livet.dll" />
     <Content Include="InfrastructureAssemblies\Livet.XML" />
     <Content Include="msvcp100.dll">

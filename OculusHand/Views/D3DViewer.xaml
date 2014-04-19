@@ -22,6 +22,5 @@
     <Grid>
         <Image Source="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=UserControl}, Path=ViewModel.ImageSource}" 
                Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-        <Border Background="Transparent" Name="mouseCapture"/>
     </Grid>
 </UserControl>
