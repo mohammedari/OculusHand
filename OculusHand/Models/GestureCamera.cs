@@ -125,6 +125,16 @@ namespace OculusHand.Models
             PXCMImage blob;
             GestureCameraUtil.Assert(gesture.QueryBlobImage(PXCMGesture.Blob.Label.LABEL_SCENE, 0, out blob), "Failed to query blob image.");
 
+            PXCMGesture.Gesture gestureData;
+            var gestureDataList = new List<PXCMGesture.Gesture>();
+            for (uint i = 0; ; ++i)
+            {
+                if (gesture.QueryGestureData(0, PXCMGesture.GeoNode.Label.LABEL_ANY, i, out gestureData) == pxcmStatus.PXCM_STATUS_ITEM_UNAVAILABLE)
+                    break;
+
+                gestureDataList.Add(gestureData);
+            }
+
             PXCMImage.ImageData colorData;
             GestureCameraUtil.Assert(
                 color.AcquireAccess(PXCMImage.Access.ACCESS_READ, out colorData),
@@ -151,7 +161,7 @@ namespace OculusHand.Models
             int blobHeight = (int)blob.info.height;
             var blobImage = blobData.ToByteArray(0, blobWidth * blobHeight);
 
-            var data = new GestureCameraData(depthWidth, depthHeight, colorWidth, colorHeight, colorImage, blobImage, blobInfo.labelBackground);
+            var data = new GestureCameraData(depthWidth, depthHeight, colorWidth, colorHeight, colorImage, blobImage, blobInfo.labelBackground, gestureDataList);
             for (int j = 0; j < depthHeight; ++j)
                 for (int i = 0; i < depthWidth; ++i)
                 {

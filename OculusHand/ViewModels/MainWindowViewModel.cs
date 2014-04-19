@@ -12,6 +12,7 @@ using Livet.Messaging.IO;
 using Livet.EventListeners;
 using Livet.Messaging.Windows;
 
+using System.IO;
 using System.Windows.Media.Media3D;
 using System.Windows.Media.Imaging;
 using OculusHand.Models;
@@ -23,6 +24,8 @@ namespace OculusHand.ViewModels
         GestureCamera _camera = null;
         OculusRift _oculus;
         HandRecognition _hand;
+        string _path;
+        uint _backgroundImageIndex;
 
         public void Initialize()
         {
@@ -38,7 +41,15 @@ namespace OculusHand.ViewModels
                 config.Parameters.HandRecognitionMaxDepthGap, 
                 config.Parameters.HandRecognitionPixelSkip);
 
-            BackgroundImagePath = config.Parameters.BackgroundImagePath;
+            _path = config.Parameters.BackgroundImagePath;
+            var files = Directory.GetFiles(_path, "*.jpg");
+            if (files.Length == 0)
+                throw new InvalidOperationException("Failed to find background image file.");
+
+            var rand = new Random();
+            _backgroundImageIndex = (uint)rand.Next(files.Length);
+
+            BackgroundImagePath = files[_backgroundImageIndex];
         }
 
         ~MainWindowViewModel()
@@ -190,6 +201,21 @@ namespace OculusHand.ViewModels
         {
             _hand.UpdateMesh(e.Data);
             Mesh = _hand.Mesh;
+
+            if (e.Data.IsGestureSwipeRight)
+                updateBackgroundImage(1);
+            else if (e.Data.IsGestureSwipeLeft)
+                updateBackgroundImage(-1);
+        }
+
+        void updateBackgroundImage(int i)
+        {
+            var files = Directory.GetFiles(_path, "*.jpg");
+            if (files.Length == 0)
+                throw new InvalidOperationException("Failed to find background image file.");
+
+            _backgroundImageIndex += (uint)i;
+            BackgroundImagePath = files[_backgroundImageIndex % files.Length];
         }
         #endregion
 

@@ -8,8 +8,9 @@ namespace OculusHand.Models
     public class GestureCameraData
     {
         Point[,] _dictionary;
+        List<PXCMGesture.Gesture> _gestures;
 
-        public GestureCameraData(int width, int height, int textureWidth, int textureHeight, byte[] texture, byte[] blob, uint blobBackground)
+        public GestureCameraData(int width, int height, int textureWidth, int textureHeight, byte[] texture, byte[] blob, uint blobBackground, List<PXCMGesture.Gesture> gestures)
         {
             _dictionary = new Point[width, height];
             Width = width;
@@ -19,6 +20,7 @@ namespace OculusHand.Models
             Texture = texture;
             Blob = blob;
             BlobBackground = blobBackground;
+            _gestures = gestures;
         }
 
         //////////////////////////////////////////////
@@ -58,6 +60,28 @@ namespace OculusHand.Models
         /// 背景のブロブ画像の値を取得します。
         /// </summary>
         public uint BlobBackground { get; private set; }
+
+        /// <summary>
+        /// 左スワイプのジェスチャーを行っているかを取得します。
+        /// </summary>
+        public bool IsGestureSwipeLeft
+        {
+            get
+            {
+                return _gestures.Select(g => g.label).Contains(PXCMGesture.Gesture.Label.LABEL_NAV_SWIPE_LEFT);
+            }
+        }
+
+        /// <summary>
+        /// 右スワイプのジェスチャーを行っているかを取得します。
+        /// </summary>
+        public bool IsGestureSwipeRight
+        {
+            get
+            {
+                return _gestures.Select(g => g.label).Contains(PXCMGesture.Gesture.Label.LABEL_NAV_SWIPE_RIGHT);
+            }
+        }
 
         #endregion
 
