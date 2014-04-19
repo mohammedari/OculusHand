@@ -158,6 +158,7 @@
     <Compile Include="Models\HandRecognition.cs" />
     <Compile Include="Models\Mesh.cs" />
     <Compile Include="Models\MyConfigParameter.cs" />
+    <Compile Include="Models\OculusDistortionParameter.cs" />
     <Compile Include="Models\OculusRift.cs" />
     <Compile Include="Models\OculusRiftException.cs" />
     <Compile Include="Models\Point.cs" />

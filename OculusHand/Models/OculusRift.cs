@@ -18,11 +18,16 @@ namespace OculusHand.Models
         [DllImport(@"RiftWrapper.dll", CallingConvention = CallingConvention.Cdecl)]
         static extern unsafe int OVR_Peek(float* w, float* x, float* y, float* z);
 
+        [DllImport(@"RiftWrapper.dll", CallingConvention = CallingConvention.Cdecl)]
+        static extern unsafe int OVR_QueryHMD(ref OVR_HMDInfo refHmdInfo);
+
         DispatcherTimer _timer;
 
         /////////////////////////////////////////////////////
 
         public event EventHandler<Matrix3D> OnUpdated;
+
+        public OculusDistortionParameter DistortionParameter { get; private set; }
 
         public OculusRift()
         {
@@ -32,6 +37,18 @@ namespace OculusHand.Models
 
             if (OVR_Init() == -1)
                 throw new OculusRiftException("Failed to initialize Oculus Rift.");
+
+            OVR_HMDInfo info = new OVR_HMDInfo();
+            if (OVR_QueryHMD(ref info) == -1)
+                throw new OculusRiftException("Failed to query HMD infomation.");
+
+            DistortionParameter = new OculusDistortionParameter()
+                { 
+                    DistortionK = info.DistortionK,
+                    ScreenWidthDistance = info.HScreenSize,
+                    LensSeparationDistance = info.LensSeparationDistance,
+                };
+
             _timer.Start();
         }
 
@@ -52,6 +69,28 @@ namespace OculusHand.Models
         {
             if (OnUpdated != null)
                 OnUpdated(this, data);
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct OVR_HMDInfo
+        {
+            public UInt32 HResolution;
+            public UInt32 VResolution;
+            public Single HScreenSize;
+            public Single VScreenSize;
+            public Single VScreenCenter;
+            public Single EyeToScreenDistance;
+            public Single LensSeparationDistance;
+            public Single InterpupillaryDistance;
+
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 4)]
+            public Single[] DistortionK;
+
+            public Int32 DesktopX;
+            public Int32 DesktopY;
+
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
+            public Char[] DisplayDeviceName;
         }
 
         //////////////////////////////////////////////////

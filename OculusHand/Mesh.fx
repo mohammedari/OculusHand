@@ -6,6 +6,8 @@ matrix Transform;		//視点変換行列
 matrix OculusOrientation;	//Oculusの視線方向回転行列
 
 float ThetaMappingDepth;
+float4 DistortionParameter;
+float LensHorizontalDistanceRatioFromCenter;
 
 static const float PI = 3.14159265358979323846264;
 
@@ -30,6 +32,18 @@ sampler2D BackgroundSampler = sampler_state
 	AddressU  = Wrap;
 	AddressV  = Wrap;
 };
+
+texture Distortion : TEXTURE2;
+sampler2D DistortionSampler = sampler_state
+{
+	Texture = (Distortion);
+    MinFilter = Linear;
+    MagFilter = Linear;
+    MipFilter = Linear;   
+	AddressU  = Clamp;
+	AddressV  = Clamp;
+};
+
 
 //////////////////////////////////////////////////////////////
 
@@ -88,7 +102,7 @@ VertexShaderOutput VertexShaderBackground(const VertexShaderInput input)
 	float4 pos = output.Position;
 	pos.z += ThetaMappingDepth;
 	pos = mul(pos, OculusOrientation);
-	float theta_u = atan2(pos.x, pos.z) / (2 * PI);
+	float theta_u = atan2(pos.x, pos.z) / (2 * PI) + 0.5;
 	float theta_v = -atan2(pos.y, length(float2(pos.x, pos.z))) / PI + 0.5;
 
 	output.Texture = float2(theta_u, theta_v);
@@ -99,6 +113,55 @@ VertexShaderOutput VertexShaderBackground(const VertexShaderInput input)
 float4 PixelShaderBackground(const PixelShaderInput input) : COLOR0
 {
 	return saturate(tex2D(BackgroundSampler, input.Texture));
+}
+
+//////////////////////////////////////////////////////////////
+
+VertexShaderOutput VertexShaderDistortion(const VertexShaderInput input)
+{
+	VertexShaderOutput output;
+	output.Position = float4(input.Position, 1.0);
+
+	//画面を左右に分ける
+	float u, v;
+	u = output.Position.x;
+	v = saturate(-output.Position.y / 2 + 0.5);
+
+	output.Texture = float2(u, v);
+
+	return output;
+}
+
+float4 PixelShaderDistortion(const PixelShaderInput input) : COLOR0
+{
+	const float scaleIn = 1;
+	const float scale = 1;
+
+	float2 uv = input.Texture;
+	float2 center = float2(0.5, 0.5);
+
+	//[TODO]正しいパラメータを適用する
+	float uvHorizontalScale = 0.5 / (1 - 0.3);//LensHorizontalDistanceRatioFromCenter);
+	if (uv.x < 0)
+	{
+		uv.x = 0 + (1 + uv.x) * uvHorizontalScale;
+		center.x = 1 - LensHorizontalDistanceRatioFromCenter;
+	}
+	else
+	{
+		uv.x = 1 - (1 - uv.x) * uvHorizontalScale;
+		center.x = LensHorizontalDistanceRatioFromCenter;
+	}
+
+	//Oculus向けにBarrelDistortionを行う
+	float2 centered = (uv - center) * scaleIn;
+	float rsq = centered.x * centered.x + centered.y * centered.y;
+	float2 warped = centered * (DistortionParameter.x + 
+		                        DistortionParameter.y * rsq + 
+								DistortionParameter.z * rsq * rsq + 
+								DistortionParameter.w * rsq * rsq * rsq) * scale + center;
+
+	return saturate(tex2D(DistortionSampler, warped));
 }
 
 //////////////////////////////////////////////////////////////
@@ -127,5 +190,11 @@ technique Mesh
 	{
 		VertexShader = compile vs_2_0 VertexShaderBackground();
 		PixelShader = compile ps_2_0 PixelShaderBackground();
+	}
+
+	pass p4
+	{
+		VertexShader = compile vs_2_0 VertexShaderDistortion();
+		PixelShader = compile ps_2_0 PixelShaderDistortion();
 	}
 }

@@ -148,6 +148,38 @@ namespace OculusHand.Views
                 viewer.ViewModel.UpdateOrientation((Matrix3D)e.NewValue);
         }
 
+        /// <summary>
+        /// OculusのためのDistortion向けのパラメータです。
+        /// </summary>
+        public OculusDistortionParameter DistortionParameter
+        {
+            get { return (OculusDistortionParameter)GetValue(DistortionParameterProperty); }
+            set { SetValue(DistortionParameterProperty, value); }
+        }
+
+        /// <summary>
+        /// OculusのためのDistortionのパラメータの依存関係プロパティです。
+        /// </summary>
+        public static readonly DependencyProperty DistortionParameterProperty =
+            DependencyProperty.Register(
+                "DistortionParameter", 
+                typeof(OculusDistortionParameter), 
+                typeof(D3DViewer), 
+                new FrameworkPropertyMetadata(
+                    new OculusDistortionParameter(), 
+                    FrameworkPropertyMetadataOptions.AffectsRender, 
+                    new PropertyChangedCallback(onDistortionParameterUpdated)));
+
+        //依存関係プロパティが更新されると、VMにパラメータの更新を通知します。
+        static void onDistortionParameterUpdated(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            var viewer = d as D3DViewer;
+            var value = e.NewValue as OculusDistortionParameter;
+            if (viewer != null && value != null)
+                viewer.ViewModel.UpdateDistortionParameter(value);
+        }
+
+
         #endregion
     }
 }

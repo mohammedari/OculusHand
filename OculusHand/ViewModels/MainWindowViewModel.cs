@@ -30,6 +30,7 @@ namespace OculusHand.ViewModels
             initializeCamera(config.Parameters.DeviceName, config.Parameters.GestureModuleName);
 
             _oculus = new OculusRift();
+            DistortionParameter = _oculus.DistortionParameter;
             _oculus.OnUpdated += new EventHandler<Matrix3D>((o, e) => { Orientation = e; });
 
             //[TODO]パラメータをセット
@@ -80,6 +81,22 @@ namespace OculusHand.ViewModels
         }
         #endregion
 
+        #region DistortionParameter変更通知プロパティ
+        private OculusDistortionParameter _DistortionParameter;
+
+        public OculusDistortionParameter DistortionParameter
+        {
+            get
+            { return _DistortionParameter; }
+            set
+            { 
+                if (_DistortionParameter == value)
+                    return;
+                _DistortionParameter = value;
+                RaisePropertyChanged("DistortionParameter");
+            }
+        }
+        #endregion
 
         #region ErrorMessage変更通知プロパティ
         private string _ErrorMessage;

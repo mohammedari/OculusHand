@@ -48,6 +48,8 @@ namespace OculusHand.ViewModels
         int _surfaceVertexCount;
         int _surfaceIndexCount;
 
+        Texture _distortion;
+
         //[TODO]パラメータで設定できるように
         int SurfaceResolutionWidth = 80;
         int SurfaceResolutionHeight = 45;
@@ -145,6 +147,16 @@ namespace OculusHand.ViewModels
         }
 
         /// <summary>
+        /// Oculus向けのBarrelDistortionのためのパラメータを設定します。
+        /// </summary>
+        /// <param name="parameter">Distortionパラメータ</param>
+        public void UpdateDistortionParameter(OculusDistortionParameter parameter)
+        {
+            _effect.SetValue("DistortionParameter", parameter.DistortionK);
+            _effect.SetValue("LensHorizontalDistanceRatioFromCenter", parameter.LensSeparationDistance / parameter.ScreenWidthDistance);
+        }
+
+        /// <summary>
         /// 背景画像を更新します。
         /// </summary>
         public void UpdateBackground(string filename)
@@ -222,6 +234,11 @@ namespace OculusHand.ViewModels
             _surfaceIndexBuffer = new IndexBuffer(_device, backBufferWidth * backBufferHeight * Marshal.SizeOf(typeof(int)), Usage.WriteOnly, Pool.Default, false);
             makeSurface(SurfaceResolutionWidth, SurfaceResolutionHeight);
             _effect.SetValue("ThetaMappingDepth", ThetaMappingDepth);
+
+            //Barrel Distortion用のテクスチャを作成
+            _distortion = new Texture(_device, backBufferWidth, backBufferHeight, 1, Usage.RenderTarget, Format.X8B8G8R8, Pool.Default);
+            var handle = _effect.GetParameter(null, "Distortion");
+            _effect.SetTexture(handle, _distortion);
 
             //[TODO]Test
             UpdateBackground(@"Images\VrPlayerSample.jpg");
@@ -350,12 +367,28 @@ namespace OculusHand.ViewModels
             ImageSource.Lock();
             ImageSource.SetBackBuffer(D3DResourceType.IDirect3DSurface9, _device.GetBackBuffer(0, 0).NativePointer);
 
+            //通常のイメージを描画Distortion用のテクスチャに描画
+            var renderTarget = _device.GetRenderTarget(0);
+            _device.SetRenderTarget(0, _distortion.GetSurfaceLevel(0));
+
             _device.Clear(ClearFlags.Target, background, 0, 0);
             _device.BeginScene();
             _effect.Begin();
 
             drawBackground();
             drawHand();
+
+            _effect.End();
+            _device.EndScene();
+
+            //Distortion用のテクスチャを使って画面を描画
+            _device.SetRenderTarget(0, renderTarget);
+
+            _device.Clear(ClearFlags.Target, background, 0, 0);
+            _device.BeginScene();
+            _effect.Begin();
+
+            drawBarrelDistortion();
 
             _effect.End();
             _device.EndScene();
@@ -402,6 +435,17 @@ namespace OculusHand.ViewModels
             //        _device.DrawIndexedPrimitive(PrimitiveType.TriangleList, 0, 0, _vertexCount, 0, _indexCount / 3);
             //    }
             //_effect.EndPass();
+        }
+
+        void drawBarrelDistortion()
+        {
+            _device.SetStreamSource(0, _surfaceVertexBuffer, 0, Marshal.SizeOf(typeof(Vertex)));
+            _device.Indices = _surfaceIndexBuffer;
+
+            _device.SetRenderState(RenderState.FillMode, FillMode.Solid);
+            _effect.BeginPass(4);
+            _device.DrawIndexedPrimitive(PrimitiveType.TriangleList, 0, 0, _surfaceVertexCount, 0, _surfaceIndexCount / 3);
+            _effect.EndPass();
         }
 
         /// <summary>

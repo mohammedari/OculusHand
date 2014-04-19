@@ -54,25 +54,35 @@ namespace OculusHand.Models
             mesh.Texture = data.Texture;
 
             //頂点の追加
-            var indexMap = new Nullable<int>[data.Width, data.Height];
+            var indexMap = new int[data.Width, data.Height];
             int index = 0;
             for (int y = 0; y < data.Height; y += Skip)
                 for (int x = 0; x < data.Width; x += Skip)
                 {
                     //背景領域は無視
                     if (data.Blob[data.Width * y + x] == BackgroundBlob)
+                    {
+                        indexMap[x, y] = -1;
                         continue;
+                    }
 
                     Point point;
                     if (data.TryGet(x, y, out point))
                     {
                         //遠いところにあるものは無視
                         if (MaxDepth < point.Z)
+                        {
+                            indexMap[x, y] = -1;
                             continue;
+                        }
 
                         indexMap[x, y] = index;
                         mesh.AddPoint(point);
                         ++index;
+                    }
+                    else
+                    {
+                        indexMap[x, y] = -1;
                     }
                 }
 
@@ -82,37 +92,37 @@ namespace OculusHand.Models
                 for (int x = Skip; x < data.Width - Skip; x += Skip)
                 {
                     //頂点が存在する場合は左上と右下に三角形をつくろうとする
-                    if (indexMap[x, y].HasValue)
+                    if (indexMap[x, y] != -1)
                     {
-                        int center = indexMap[x, y].Value;
+                        int center = indexMap[x, y];
 
-                        if (indexMap[x - Skip, y].HasValue &&
-                            indexMap[x, y - Skip].HasValue)
-                            mesh.AddIndices(new int[] { indexMap[x - Skip, y].Value,
-                                                        indexMap[x, y - Skip].Value, 
+                        if (indexMap[x - Skip, y] != -1 &&
+                            indexMap[x, y - Skip] != -1)
+                            mesh.AddIndices(new int[] { indexMap[x - Skip, y],
+                                                        indexMap[x, y - Skip], 
                                                         center });
-                        if (indexMap[x + Skip, y].HasValue &&
-                            indexMap[x, y + Skip].HasValue)
+                        if (indexMap[x + Skip, y] != -1 &&
+                            indexMap[x, y + Skip] != -1)
                             mesh.AddIndices(new int[] { center, 
-                                                        indexMap[x + Skip, y].Value, 
-                                                        indexMap[x, y + Skip].Value });
+                                                        indexMap[x + Skip, y], 
+                                                        indexMap[x, y + Skip] });
                     }
                     //頂点が存在しない場合は1マスあけた左下と右上に三角形をつくろうとする
                     else
                     {
-                        if (indexMap[x - Skip, y].HasValue &&
-                            indexMap[x, y + Skip].HasValue &&
-                            indexMap[x - Skip, y + Skip].HasValue)
-                            mesh.AddIndices(new int[] { indexMap[x - Skip, y].Value, 
-                                                        indexMap[x, y + Skip].Value, 
-                                                        indexMap[x - Skip, y + Skip].Value});
+                        if (indexMap[x - Skip, y] != -1 &&
+                            indexMap[x, y + Skip] != -1 &&
+                            indexMap[x - Skip, y + Skip] != -1)
+                            mesh.AddIndices(new int[] { indexMap[x - Skip, y], 
+                                                        indexMap[x, y + Skip], 
+                                                        indexMap[x - Skip, y + Skip]});
 
-                        if (indexMap[x + Skip, y].HasValue &&
-                            indexMap[x, y - 1].HasValue &&
-                            indexMap[x + Skip, y - Skip].HasValue)
-                            mesh.AddIndices(new int[] { indexMap[x + Skip, y].Value, 
-                                                        indexMap[x, y - Skip].Value, 
-                                                        indexMap[x + Skip, y - Skip].Value});
+                        if (indexMap[x + Skip, y] != -1 &&
+                            indexMap[x, y - 1] != -1 &&
+                            indexMap[x + Skip, y - Skip] != -1)
+                            mesh.AddIndices(new int[] { indexMap[x + Skip, y], 
+                                                        indexMap[x, y - Skip], 
+                                                        indexMap[x + Skip, y - Skip]});
                     }
                 }
 
