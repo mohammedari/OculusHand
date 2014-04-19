@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using OpenCvSharp.CPlusPlus;
-
 namespace OculusHand.Models
 {
     public class HandRecognition
