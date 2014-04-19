@@ -27,7 +27,7 @@ namespace OculusHand.Models
         {
             //[TODO]パラメータをコンフィグから設定するようにする
             MaxDepth = 0.5;
-            Skip = 3;
+            Skip = 1;
 
             //[TODO]BackgroundBlobはGestureCameraから取得するようにする
             BackgroundBlob = 255;

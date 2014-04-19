@@ -175,10 +175,14 @@ namespace OculusHand.ViewModels
         /// <param name="matrix">平行回転行列の値</param>
         public void UpdateMatrix(Matrix3D matrix)
         {
-            if (!matrix.HasInverse)
-                return;
+            //if (!matrix.HasInverse)
+            //    return;
 
-            matrix.Invert();    //なんか反転しなくちゃダメだった？
+            //matrix.Invert();    //なんか反転しなくちゃダメだった？
+
+            matrix = Matrix3D.Identity;
+            matrix.OffsetY = -0.15;
+            matrix.Scale(new Vector3D(2, 2, 2));
 
             float[] mat = { (float)matrix.M11,      (float)matrix.M12,      (float)matrix.M13,      (float)matrix.M14, 
                             (float)matrix.M21,      (float)matrix.M22,      (float)matrix.M23,      (float)matrix.M24, 
@@ -345,18 +349,19 @@ namespace OculusHand.ViewModels
                 var handle = _effect.GetParameter(null, "HandTexture");
                 _effect.SetTexture(handle, _texture);
             }
-
+            
             //テクスチャの書き込み
             var data = _texture.LockRectangle(0, LockFlags.None);
-            using (var ds = new DataStream(data.DataPointer, width * height * 4, false, true))
+            unsafe
             {
+                var ptr = (byte*)data.DataPointer.ToPointer();
                 for (int y = 0; y < height; ++y)
                     for (int x = 0; x < width; ++x)
                     {
-                        ds.Write(color[(y * width + x) * 3 + 0]); //B
-                        ds.Write(color[(y * width + x) * 3 + 1]); //G
-                        ds.Write(color[(y * width + x) * 3 + 2]); //R
-                        ds.WriteByte(255);                        //A
+                        ptr[(y * width + x) * 4 + 0] = color[(y * width + x) * 3 + 0];  //B
+                        ptr[(y * width + x) * 4 + 1] = color[(y * width + x) * 3 + 1];  //G
+                        ptr[(y * width + x) * 4 + 2] = color[(y * width + x) * 3 + 2];  //R
+                        ptr[(y * width + x) * 4 + 3] = 255;                             //A
                     }
             }
             _texture.UnlockRectangle(0);

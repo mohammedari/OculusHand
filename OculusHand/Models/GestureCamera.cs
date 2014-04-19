@@ -89,7 +89,7 @@ namespace OculusHand.Models
         {
             _pipeline = new UtilMPipeline();
             _pipeline.QueryCapture().SetFilter(deviceName);
-            _pipeline.EnableImage(PXCMImage.ColorFormat.COLOR_FORMAT_RGB24);
+            _pipeline.EnableImage(PXCMImage.ColorFormat.COLOR_FORMAT_RGB24, 640, 480);
             _pipeline.EnableImage(PXCMImage.ColorFormat.COLOR_FORMAT_VERTICES);
             _pipeline.EnableGesture(gestureModuleName);
             if (!_pipeline.Init())
