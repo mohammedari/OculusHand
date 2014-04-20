@@ -69,10 +69,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>InfrastructureAssemblies\Livet.dll</HintPath>
     </Reference>
-    <Reference Include="MIConvexHullPlugin, Version=1.0.10.1021, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>InfrastructureAssemblies\MIConvexHullPlugin.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.Expression.Interactions">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>InfrastructureAssemblies\Microsoft.Expression.Interactions.dll</HintPath>
@@ -188,8 +184,6 @@
     <Content Include="libpxcclr.dll" />
     <Content Include="InfrastructureAssemblies\Livet.dll" />
     <Content Include="InfrastructureAssemblies\Livet.XML" />
-    <Content Include="InfrastructureAssemblies\MIConvexHullPlugin.dll" />
-    <Resource Include="InfrastructureAssemblies\MIConvexHullPlugin.xml" />
     <Content Include="InfrastructureAssemblies\Microsoft.Expression.Interactions.dll" />
     <Content Include="InfrastructureAssemblies\System.Windows.Interactivity.dll" />
     <Content Include="Mesh.fx">
