@@ -16,33 +16,20 @@ using System.IO;
 using System.Windows.Media.Media3D;
 using System.Windows.Media.Imaging;
 using OculusHand.Models;
-<<<<<<< HEAD
-using OpenCvSharp.CPlusPlus;
-=======
->>>>>>> develop
 
 namespace OculusHand.ViewModels
 {
     public class MainWindowViewModel : ViewModel
     {
         GestureCamera _camera = null;
-<<<<<<< HEAD
-        HandRecognition _hand;
-=======
         OculusRift _oculus;
         HandRecognition _hand;
         string _path;
         uint _backgroundImageIndex;
->>>>>>> develop
 
         public void Initialize()
         {
             var config = Util.GetConfigManager();
-<<<<<<< HEAD
-
-            //[TODO]パラメータをセット
-            _hand = new HandRecognition();
-=======
             initializeCamera(config.Parameters.DeviceName, config.Parameters.GestureModuleName);
 
             _oculus = new OculusRift();
@@ -63,7 +50,6 @@ namespace OculusHand.ViewModels
             _backgroundImageIndex = (uint)rand.Next(files.Length);
 
             BackgroundImagePath = files[_backgroundImageIndex];
->>>>>>> develop
         }
 
         ~MainWindowViewModel()
@@ -92,8 +78,6 @@ namespace OculusHand.ViewModels
         }
         #endregion
 
-<<<<<<< HEAD
-=======
         #region Orientation変更通知プロパティ
         private Matrix3D _Orientation;
 
@@ -145,7 +129,6 @@ namespace OculusHand.ViewModels
         }
         #endregion
 
->>>>>>> develop
         #region ErrorMessage変更通知プロパティ
         private string _ErrorMessage;
 
@@ -218,8 +201,6 @@ namespace OculusHand.ViewModels
         {
             _hand.UpdateMesh(e.Data);
             Mesh = _hand.Mesh;
-<<<<<<< HEAD
-=======
 
             if (e.Data.IsGestureSwipeRight)
                 updateBackgroundImage(1);
@@ -235,7 +216,6 @@ namespace OculusHand.ViewModels
 
             _backgroundImageIndex += (uint)i;
             BackgroundImagePath = files[_backgroundImageIndex % files.Length];
->>>>>>> develop
         }
         #endregion
 

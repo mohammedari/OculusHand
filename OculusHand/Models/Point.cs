@@ -17,11 +17,7 @@ namespace OculusHand.Models
         public float Y;
         public float Z;
 
-<<<<<<< HEAD:OculusHand/Models/Point.cs
-        public Point(float u, float v, float x, float y, float z, float r, float g, float b)
-=======
         public Point(float u, float v, float x, float y, float z)
->>>>>>> develop:OculusHand/Models/Point.cs
         {
             U = u;
             V = v;
@@ -57,23 +53,13 @@ namespace OculusHand.Models
 
             var other = (Point)obj;
             return U == other.U && V == other.V && 
-<<<<<<< HEAD:OculusHand/Models/Point.cs
-                   X == other.X && Y == other.Y && Z == other.Z && 
-                   R == other.R && G == other.G && B == other.B;
-=======
                    X == other.X && Y == other.Y && Z == other.Z;
->>>>>>> develop:OculusHand/Models/Point.cs
         }
 
         public override int GetHashCode()
         {
             return U.GetHashCode() ^ V.GetHashCode() ^ 
-<<<<<<< HEAD:OculusHand/Models/Point.cs
-                   X.GetHashCode() ^ Y.GetHashCode() ^ Z.GetHashCode() ^
-                   R.GetHashCode() ^ G.GetHashCode() ^ B.GetHashCode(); ;
-=======
                    X.GetHashCode() ^ Y.GetHashCode() ^ Z.GetHashCode();
->>>>>>> develop:OculusHand/Models/Point.cs
         }
 
         #endregion

@@ -130,12 +130,9 @@
     <Compile Include="Models\HandRecognition.cs" />
     <Compile Include="Models\Mesh.cs" />
     <Compile Include="Models\MyConfigParameter.cs" />
-<<<<<<< HEAD
-=======
     <Compile Include="Models\OculusDistortionParameter.cs" />
     <Compile Include="Models\OculusRift.cs" />
     <Compile Include="Models\OculusRiftException.cs" />
->>>>>>> develop
     <Compile Include="Models\Point.cs" />
     <Compile Include="Models\Util.cs" />
     <Compile Include="ViewModels\D3DViewerViewModel.cs" />
@@ -198,10 +195,6 @@
     <Content Include="Mesh.fx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-<<<<<<< HEAD
-    <Content Include="Mesh.fx" />
-=======
->>>>>>> develop
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

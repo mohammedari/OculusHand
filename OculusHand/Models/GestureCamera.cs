@@ -157,15 +157,11 @@ namespace OculusHand.Models
             var verticies = depthData.ToShortArray(0, 3 * depthWidth * depthHeight);
             var uv = depthData.ToFloatArray(2, 2 * depthWidth * depthHeight);
 
-<<<<<<< HEAD
-            var data = new GestureCameraData(depthWidth, depthHeight, colorWidth, colorHeight, colorImage);
-=======
             int blobWidth = (int)blob.info.width;
             int blobHeight = (int)blob.info.height;
             var blobImage = blobData.ToByteArray(0, blobWidth * blobHeight);
 
             var data = new GestureCameraData(depthWidth, depthHeight, colorWidth, colorHeight, colorImage, blobImage, blobInfo.labelBackground, gestureDataList);
->>>>>>> develop
             for (int j = 0; j < depthHeight; ++j)
                 for (int i = 0; i < depthWidth; ++i)
                 {
@@ -185,16 +181,8 @@ namespace OculusHand.Models
                     x *= _unit_m;
                     y *= _unit_m;
                     z *= _unit_m;
-<<<<<<< HEAD
-                    float b = colorImage[3 * (colorY * colorWidth + colorX) + 0] / 255.0f;
-                    float g = colorImage[3 * (colorY * colorWidth + colorX) + 1] / 255.0f;
-                    float r = colorImage[3 * (colorY * colorWidth + colorX) + 2] / 255.0f;
-
-                    data.Set(i, j, new Point(u, v, x, y, z, r, g, b));
-=======
 
                     data.Set(i, j, new Point(u, v, x, y, z));
->>>>>>> develop
                 }
 
             GestureCameraUtil.Assert(

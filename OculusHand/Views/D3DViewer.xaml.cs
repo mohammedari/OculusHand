@@ -94,11 +94,6 @@ namespace OculusHand.Views
         //依存関係プロパティが更新されると、VMに点群の更新を通知します。
         static void onPointsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-<<<<<<< HEAD
-            D3DViewer viewer = d as D3DViewer;
-            if (viewer != null && e.NewValue != null)
-                viewer.ViewModel.UpdateMesh((Mesh)e.NewValue);
-=======
             var viewer = d as D3DViewer;
             var value = e.NewValue as Mesh;
             if (viewer != null && value != null)
@@ -212,7 +207,6 @@ namespace OculusHand.Views
             var value = e.NewValue as string;
             if (viewer != null && value != null)
                 viewer.ViewModel.UpdateBackground(value);
->>>>>>> develop
         }
         #endregion
 

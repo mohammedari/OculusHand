@@ -3,10 +3,6 @@
 
 //パラメータ
 matrix Transform;		//視点変換行列
-<<<<<<< HEAD
-Texture2D HandTexture : register(t0);
-SamplerState HandSampler : register(s0);
-=======
 matrix OculusOrientation;	//Oculusの視線方向回転行列
 
 float ThetaMappingDepth;
@@ -48,34 +44,24 @@ sampler2D DistortionSampler = sampler_state
 	AddressV  = Clamp;
 };
 
->>>>>>> develop
 
 //////////////////////////////////////////////////////////////
 
 struct VertexShaderInput
 {
-<<<<<<< HEAD
-    float3 Position : POSITION;
-	float2 Texture : TEXCOORD
-=======
     float3 Position : POSITION0;
 	float2 Texture : NORMAL;
->>>>>>> develop
 };
 
 struct VertexShaderOutput
 {
     float4 Position : POSITION;
-<<<<<<< HEAD
-	float2 Texture : TEXCOORD;
-=======
 	float2 Texture : TEXCOORD0;
 };
 
 struct PixelShaderInput
 {
 	float2 Texture : TEXCOORD0;
->>>>>>> develop
 };
 
 //////////////////////////////////////////////////////////////
@@ -85,19 +71,11 @@ VertexShaderOutput VertexShaderFunction(const VertexShaderInput input)
 	VertexShaderOutput output;
 	output.Position = mul(float4(input.Position, 1.0), Transform);
 	output.Texture = input.Texture;
-<<<<<<< HEAD
-=======
 	output.Position.z = 0;
->>>>>>> develop
 
     return output;
 }
 
-<<<<<<< HEAD
-float4 PixelShaderFunction(const VertexShaderOutput input)
-{
-	return HandTexture.Sample(HandSampler, input.Texture);
-=======
 float4 PixelShaderFunction(const PixelShaderInput input) : COLOR0
 {
 	return saturate(tex2D(HandSampler, input.Texture));
@@ -184,7 +162,6 @@ float4 PixelShaderDistortion(const PixelShaderInput input) : COLOR0
 								DistortionParameter.w * rsq * rsq * rsq) * scale + center;
 
 	return saturate(tex2D(DistortionSampler, warped));
->>>>>>> develop
 }
 
 //////////////////////////////////////////////////////////////
@@ -193,10 +170,6 @@ technique Mesh
 {
 	pass p0
 	{
-<<<<<<< HEAD
-		VertexShader = compile vs_3_0 VertexShaderFunction();
-		PixelShader = compile ps_3_0 PixelShaderFunction();
-=======
 		VertexShader = compile vs_2_0 VertexShaderFunction();
 		PixelShader = compile ps_2_0 PixelShaderFunction();
 	}
@@ -223,6 +196,5 @@ technique Mesh
 	{
 		VertexShader = compile vs_2_0 VertexShaderDistortion();
 		PixelShader = compile ps_2_0 PixelShaderDistortion();
->>>>>>> develop
 	}
 }

@@ -3,11 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-<<<<<<< HEAD
-using MIConvexHull;
-
-=======
->>>>>>> develop
 namespace OculusHand.Models
 {
     public class HandRecognition
@@ -15,13 +10,9 @@ namespace OculusHand.Models
         //////////////////////////////////////////////
         #region Properties
 
-<<<<<<< HEAD
-        //[TODO]手の領域抽出のためのパラメータ
-=======
         public float MaxDepth { get; private set; }
         public float MaxDepthGap { get; private set; }
         public int Skip { get; private set; }
->>>>>>> develop
 
         public Mesh Mesh { get; private set; }
 
@@ -29,8 +20,6 @@ namespace OculusHand.Models
 
         //////////////////////////////////////////////
         #region Public Methods
-<<<<<<< HEAD
-=======
 
         public HandRecognition(float maxDepth, float maxDepthGap, int skip)
         {
@@ -39,7 +28,6 @@ namespace OculusHand.Models
             Skip = skip;
         }
 
->>>>>>> develop
         /// <summary>
         /// 手の領域のメッシュを再構成します。
         /// </summary>
@@ -55,80 +43,12 @@ namespace OculusHand.Models
         Mesh extractHandMesh(GestureCameraData data)
         {
             var mesh = new Mesh();
-<<<<<<< HEAD
-=======
 
->>>>>>> develop
             mesh.TextureWidth = data.TextureWidth;
             mesh.TextureHeight = data.TextureHeight;
             mesh.Texture = data.Texture;
 
             //頂点の追加
-<<<<<<< HEAD
-            var vertices = new List<Vertex>();
-            int index = 0;
-            for (int y = 0; y < data.Height; ++y)
-                for (int x = 0; x < data.Width; ++x)
-                {
-                    //[TODO]微分して手の領域の頂点を抽出する
-                    Point point;
-                    if (data.TryGet(x, y, out point))
-                    {
-                        vertices.Add(new Vertex(x, y, index));
-                        mesh.AddPoint(point);
-                        ++index;
-                    }
-                }
-
-            //ドロネー三角形分割でインデックス列を作成
-            var voronoi = VoronoiMesh.Create<Vertex, Cell>(vertices);
-            foreach (var cell in voronoi.Vertices)
-            {
-                mesh.AddIndices(cell.Indices);
-            }
-
-            return mesh;
-        }
-        #endregion
-
-        //////////////////////////////////////////////
-        #region Internal Classes
-        class Vertex : IVertex
-        {
-            public int X;
-            public int Y;
-            public int Index;
-
-            public Vertex(int x, int y, int index)
-            {
-                X = x;
-                Y = y;
-                Index = index;
-            }
-
-            public double[] Position
-            {
-                get
-                {
-                    return new double[] { X, Y };
-                }
-                set
-                {
-                    throw new NotImplementedException();
-                }
-            }
-        }
-
-        class Cell : TriangulationCell<Vertex, Cell>
-        {
-            public IEnumerable<int> Indices
-            {
-                get
-                {
-                    return Vertices.Select(v => v.Index);
-                }
-            }
-=======
             var indexMap = new int[data.Width, data.Height];
             var depthMap = new float[data.Width, data.Height];
             int index = 0;
@@ -206,7 +126,6 @@ namespace OculusHand.Models
                 }
 
             return mesh;
->>>>>>> develop
         }
         #endregion
     }

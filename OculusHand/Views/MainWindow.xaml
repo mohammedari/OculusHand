@@ -35,14 +35,6 @@
     </i:Interaction.Triggers>
     
     <Grid>
-<<<<<<< HEAD
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="auto"/>
-        </Grid.RowDefinitions>
-        <v:D3DViewer Mesh="{Binding Mesh}"/>
-        <Label Grid.Row="1" Content="{Binding ErrorMessage}" Foreground="Red" HorizontalAlignment="Right"/>
-=======
         <v:D3DViewer Mesh="{Binding Mesh}" 
                      Orientation="{Binding Orientation}" 
                      DistortionParameter="{Binding DistortionParameter}"
@@ -54,6 +46,5 @@
             </Grid.RowDefinitions>
             <Label Grid.Row="1" Content="{Binding ErrorMessage}" Foreground="Red" HorizontalAlignment="Right"/>
         </Grid>
->>>>>>> develop
     </Grid>
 </Window>
