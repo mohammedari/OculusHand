@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 using ConfigUtil;
 
-namespace OculuSLAM.Models
+namespace OculusHand.Models
 {
     public class Util
     {
-        const string _configFileName = "app.config";
+        const string _configFileName = "OculusHand.config";
         ConfigManager<MyConfigParameter> _config = null;
 
         Util() {}

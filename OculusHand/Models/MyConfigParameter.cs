@@ -6,35 +6,49 @@ using System.Threading.Tasks;
 
 using ConfigUtil;
 
-namespace OculuSLAM.Models
+namespace OculusHand.Models
 {
     public class MyConfigParameter : ConfigParameter
     {
         public string DeviceName { get; set; }
+        public string GestureModuleName { get; set; }
 
         public int BackBufferWidth { get; set; }
         public int BackBufferHeight { get; set; }
-        public int PointSize { get; set; }
 
-        public float VoxelSize { get; set; }
-        public int ICPPointCountMin { get; set; }
-        public int ICPMaxIteration { get; set; }
-        public double ICPErrorConvergence { get; set; }
-        public int ICPSamplingCount { get; set; }
+        public float HandRecognitionMaxDepth { get; set; }
+        public float HandRecognitionMaxDepthGap { get; set; }
+        public int HandRecognitionPixelSkip { get; set; }
+
+        public int DistortionSurfaceResolutionWidth { get; set; }
+        public int DistortionSurfaceResolutionHeight { get; set; }
+        public float DistortionThetaMappingDepth { get; set; }
+        public string BackgroundImagePath { get; set; }
+
+        public double CameraPitchAngle { get; set; }
+        public double CameraOffsetY { get; set; }
+        public double CameraScale { get; set; }
 
         public override void Initialize()
         {
             DeviceName = "";
+            GestureModuleName = "";
 
             BackBufferWidth = 960;
             BackBufferHeight = 540;
-            PointSize = 5;
 
-            VoxelSize = 0.01f;
-            ICPPointCountMin = 2000;
-            ICPErrorConvergence = 2e-3;
-            ICPMaxIteration = 10;
-            ICPSamplingCount = 1000;
+            HandRecognitionMaxDepth = 0.5f;
+            HandRecognitionMaxDepthGap = 0.01f;
+            HandRecognitionPixelSkip = 1;
+
+            DistortionSurfaceResolutionWidth = 80;
+            DistortionSurfaceResolutionHeight = 45;
+            DistortionThetaMappingDepth = 1f;
+            BackgroundImagePath = @"Images\VrPlayerSample.jpg";
+
+            CameraPitchAngle = -5;
+            CameraOffsetY = 0.15;
+            CameraScale = 2;
         }
 
         public override object Clone()

@@ -12,33 +12,58 @@ using Livet.Messaging.IO;
 using Livet.EventListeners;
 using Livet.Messaging.Windows;
 
+using System.IO;
 using System.Windows.Media.Media3D;
 using System.Windows.Media.Imaging;
-using OculuSLAM.Models;
+using OculusHand.Models;
+<<<<<<< HEAD
 using OpenCvSharp.CPlusPlus;
+=======
+>>>>>>> develop
 
-namespace OculuSLAM.ViewModels
+namespace OculusHand.ViewModels
 {
     public class MainWindowViewModel : ViewModel
     {
         GestureCamera _camera = null;
-        VoxelizedMap _map;
-        IterativeClosestPoint _icp;
-        int _icpMinPoints;
+<<<<<<< HEAD
+        HandRecognition _hand;
+=======
+        OculusRift _oculus;
+        HandRecognition _hand;
+        string _path;
+        uint _backgroundImageIndex;
+>>>>>>> develop
 
         public void Initialize()
         {
-            //initializeCamera();
-                
             var config = Util.GetConfigManager();
-            _map = new VoxelizedMap(config.Parameters.VoxelSize);
-            _icp = new IterativeClosestPoint(
-                config.Parameters.ICPSamplingCount,
-                config.Parameters.ICPErrorConvergence,
-                config.Parameters.ICPMaxIteration);
-            _icpMinPoints = config.Parameters.ICPPointCountMin;
+<<<<<<< HEAD
 
-            test();
+            //[TODO]パラメータをセット
+            _hand = new HandRecognition();
+=======
+            initializeCamera(config.Parameters.DeviceName, config.Parameters.GestureModuleName);
+
+            _oculus = new OculusRift();
+            DistortionParameter = _oculus.DistortionParameter;
+            _oculus.OnUpdated += new EventHandler<Matrix3D>((o, e) => { Orientation = e; });
+
+            _hand = new HandRecognition(
+                config.Parameters.HandRecognitionMaxDepth, 
+                config.Parameters.HandRecognitionMaxDepthGap, 
+                config.Parameters.HandRecognitionPixelSkip);
+
+            _path = config.Parameters.BackgroundImagePath;
+            var files = Directory.GetFiles(_path, "*.jpg");
+            if (files.Length == 0)
+                throw new InvalidOperationException("Failed to find background image file.");
+
+            var rand = new Random();
+            _backgroundImageIndex = (uint)rand.Next(files.Length);
+
+            BackgroundImagePath = files[_backgroundImageIndex];
+>>>>>>> develop
         }
 
         ~MainWindowViewModel()
@@ -47,45 +72,80 @@ namespace OculuSLAM.ViewModels
         }
 
         //////////////////////////////////////////////////
-        #region Points変更通知プロパティ
-        private PointCloud _cloud = new PointCloud();
+        #region Mesh変更通知プロパティ
+        private Mesh _mesh = new Mesh();
 
-        public PointCloud Points
+        public Mesh Mesh
         {
             get
-            { return _cloud; }
+            { return _mesh; }
             set
             {
-                if (_cloud == value)
+                if (_mesh == value)
                 {
                     return;
                 }
 
-                _cloud = value;
-                RaisePropertyChanged("Points");
+                _mesh = value;
+                RaisePropertyChanged("Mesh");
             }
         }
         #endregion
 
+<<<<<<< HEAD
+=======
+        #region Orientation変更通知プロパティ
+        private Matrix3D _Orientation;
 
-        #region Transform変更通知プロパティ
-        private Mat _Transform;
-
-        public Mat Transform
+        public Matrix3D Orientation
         {
             get
-            { return _Transform; }
+            { return _Orientation; }
             set
             { 
-                if (_Transform == value)
+                if (_Orientation == value)
                     return;
-                _Transform = value;
-                RaisePropertyChanged("Transform");
+                _Orientation = value;
+                RaisePropertyChanged("Orientation");
             }
         }
         #endregion
 
+        #region DistortionParameter変更通知プロパティ
+        private OculusDistortionParameter _DistortionParameter;
 
+        public OculusDistortionParameter DistortionParameter
+        {
+            get
+            { return _DistortionParameter; }
+            set
+            { 
+                if (_DistortionParameter == value)
+                    return;
+                _DistortionParameter = value;
+                RaisePropertyChanged("DistortionParameter");
+            }
+        }
+        #endregion
+
+        #region BackgroundImagePath変更通知プロパティ
+        private string _BackgroundImagePath;
+
+        public string BackgroundImagePath
+        {
+            get
+            { return _BackgroundImagePath; }
+            set
+            { 
+                if (_BackgroundImagePath == value)
+                    return;
+                _BackgroundImagePath = value;
+                RaisePropertyChanged("BackgroundImagePath");
+            }
+        }
+        #endregion
+
+>>>>>>> develop
         #region ErrorMessage変更通知プロパティ
         private string _ErrorMessage;
 
@@ -111,15 +171,6 @@ namespace OculuSLAM.ViewModels
 
         public void Capture()
         {
-            //PointCloud cloud;
-            //lock (Points)
-            //{
-            //    cloud = (PointCloud)Points.Clone();
-            //}
-
-            //cloud.Save("capture_" + DateTime.Now.ToString("yyyyMMddHHmmssff") + ".pcd");
-
-            icp();
         }
 
         #endregion
@@ -139,14 +190,13 @@ namespace OculuSLAM.ViewModels
             }
         }
 
-        bool initializeCamera()
+        bool initializeCamera(string device, string module)
         {
             disposeCamera();
             try
             {
                 Mouse.OverrideCursor = System.Windows.Input.Cursors.Wait;
-                var config = Util.GetConfigManager();
-                _camera = new GestureCamera(config.Parameters.DeviceName);
+                _camera = new GestureCamera(device, module);
             }
             catch (GestureCameraException e)
             {
@@ -166,99 +216,26 @@ namespace OculuSLAM.ViewModels
 
         void onCameraUpdated(object s, GestureCamera.OnUpdatedEventArgs e)
         {
-            if (_map.Count < _icpMinPoints)
-            {
-                _map.Points = e.Cloud.Points;
-                lock (Points)
-                {
-                    Points = new PointCloud(_map.Points);
-                }
-                return;
-            }
+            _hand.UpdateMesh(e.Data);
+            Mesh = _hand.Mesh;
+<<<<<<< HEAD
+=======
 
-            if (e.Cloud.Count < _icpMinPoints)
-            {
-                Console.WriteLine("Points not enough.");
-                return;
-            }
-
-            if (!_icp.Match(_map, e.Cloud))
-            {
-                Console.WriteLine("ICP not converged.");
-                return;
-            }
-            _icp.TransformPointCloud(e.Cloud);
-
-            _map.Merge(e.Cloud);
-            lock (Points)
-            {
-                Points = new PointCloud(_map.Points);
-            }
-
-            Transform = _icp.Transform.Clone();
+            if (e.Data.IsGestureSwipeRight)
+                updateBackgroundImage(1);
+            else if (e.Data.IsGestureSwipeLeft)
+                updateBackgroundImage(-1);
         }
 
-        //[TODO] ICPのテストのための初期化
-        void test()
+        void updateBackgroundImage(int i)
         {
-            lock (Points)
-            {
-                Points = new PointCloud("capture_2014031100051137.pcd");
-            }
-        }
+            var files = Directory.GetFiles(_path, "*.jpg");
+            if (files.Length == 0)
+                throw new InvalidOperationException("Failed to find background image file.");
 
-        //[TODO] ICPのテストを行う
-        int _i = 0;
-        void icp()
-        {
-            if (_i == 0)
-            {
-                var config = Util.GetConfigManager();
-                //_map = new VoxelizedMap("capture_2014031100051370.pcd", config.Parameters.VoxelSize);
-                //_map = new VoxelizedMap("capture_2014031100051137.pcd", config.Parameters.VoxelSize);
-                _map = new VoxelizedMap("capture_2014031100051137_transformed.pcd", config.Parameters.VoxelSize);
-
-                if (Points.Count < config.Parameters.ICPPointCountMin)
-                {
-                    Console.WriteLine("points not enough.");
-                    return;
-                }
-
-                if (!_icp.Match(_map, Points))
-                {
-                    Console.WriteLine("ICP not converged.");
-                    return;
-                }
-
-                Points = new PointCloud(_map.Points);
-                //_icp.TransformPointCloud(Points);
-                //RaisePropertyChanged("Points"); //[TODO] RaisePropertyChangedで更新されるようにする
-
-                Transform = _icp.Transform.Clone();
-            }
-            else if (_i % 3 == 1) //1
-            {
-                Points = new PointCloud("capture_2014031100051137.pcd");
-            }
-            else if (_i % 3 == 2) //2
-            {
-                var points = new PointCloud("capture_2014031100051137.pcd");
-                _icp.TransformPointCloud(points);
-                Points = points;
-
-                //points.Save("capture_2014031100051137_transformed.pcd");
-            }
-            else //3
-            {
-                Points = new PointCloud("capture_2014031100051137_transformed.pcd");
-            }
-            ++_i;
-
-            //_map.Merge(Points);
-            //lock (Points)
-            //{
-            //    Points = new PointCloud(_map.Points);
-            //}
+            _backgroundImageIndex += (uint)i;
+            BackgroundImagePath = files[_backgroundImageIndex % files.Length];
+>>>>>>> develop
         }
         #endregion
 
@@ -284,6 +261,7 @@ namespace OculuSLAM.ViewModels
 
                 base.Dispose();
                 disposeCamera();
+                _oculus.Dispose();
             }
         }
         #endregion

@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
 
-namespace OculuSLAM.Models
+namespace OculusHand.Models
 {
     public class GestureCamera : IDisposable
     {
@@ -26,7 +26,7 @@ namespace OculuSLAM.Models
         /// <summary>
         /// Event which is raised when a new frame arrived.
         /// </summary>
-        public EventHandler<OnUpdatedEventArgs> OnUpdated { get; set; }
+        public event EventHandler<OnUpdatedEventArgs> OnUpdated;
 
         /// <summary>
         /// True if image aquisition loop is active.
@@ -72,9 +72,9 @@ namespace OculuSLAM.Models
         /// Create instance with device name and module name.
         /// </summary>
         /// <param name="deviceName">The name of using device</param>
-        public GestureCamera(string deviceName)
+        public GestureCamera(string deviceName, string gestureModuleName)
         {
-            buildPipeline(deviceName);
+            buildPipeline(deviceName, gestureModuleName);
         }
 
         ~GestureCamera()
@@ -85,12 +85,13 @@ namespace OculuSLAM.Models
 
         //////////////////////////////////////////////////
         #region Private Methods
-        void buildPipeline(string deviceName)
+        void buildPipeline(string deviceName, string gestureModuleName)
         {
             _pipeline = new UtilMPipeline();
             _pipeline.QueryCapture().SetFilter(deviceName);
             _pipeline.EnableImage(PXCMImage.ColorFormat.COLOR_FORMAT_RGB24);
             _pipeline.EnableImage(PXCMImage.ColorFormat.COLOR_FORMAT_VERTICES);
+            _pipeline.EnableGesture(gestureModuleName);
             if (!_pipeline.Init())
                 throw new GestureCameraException("Failed to initialize pipeline.");
 
@@ -117,6 +118,22 @@ namespace OculuSLAM.Models
 
             var color = _pipeline.QueryImage(PXCMImage.ImageType.IMAGE_TYPE_COLOR);
             var depth = _pipeline.QueryImage(PXCMImage.ImageType.IMAGE_TYPE_DEPTH);
+            var gesture = _pipeline.QueryGesture();
+
+            PXCMGesture.Blob blobInfo;
+            GestureCameraUtil.Assert(gesture.QueryBlobData(PXCMGesture.Blob.Label.LABEL_SCENE, 0, out blobInfo), "Failed to query blob data.");
+            PXCMImage blob;
+            GestureCameraUtil.Assert(gesture.QueryBlobImage(PXCMGesture.Blob.Label.LABEL_SCENE, 0, out blob), "Failed to query blob image.");
+
+            PXCMGesture.Gesture gestureData;
+            var gestureDataList = new List<PXCMGesture.Gesture>();
+            for (uint i = 0; ; ++i)
+            {
+                if (gesture.QueryGestureData(0, PXCMGesture.GeoNode.Label.LABEL_ANY, i, out gestureData) == pxcmStatus.PXCM_STATUS_ITEM_UNAVAILABLE)
+                    break;
+
+                gestureDataList.Add(gestureData);
+            }
 
             PXCMImage.ImageData colorData;
             GestureCameraUtil.Assert(
@@ -125,7 +142,11 @@ namespace OculuSLAM.Models
             PXCMImage.ImageData depthData;
             GestureCameraUtil.Assert(
                 depth.AcquireAccess(PXCMImage.Access.ACCESS_READ, out depthData),
-                "Failed to aquire access on depth image.");
+                "Failed to acquire access on depth image.");
+            PXCMImage.ImageData blobData;
+            GestureCameraUtil.Assert(
+                blob.AcquireAccess(PXCMImage.Access.ACCESS_READ, out blobData),
+                "Failed to acquire access on blob image.");
 
             int colorWidth = (int)color.info.width;
             int colorHeight = (int)color.info.height;
@@ -136,7 +157,15 @@ namespace OculuSLAM.Models
             var verticies = depthData.ToShortArray(0, 3 * depthWidth * depthHeight);
             var uv = depthData.ToFloatArray(2, 2 * depthWidth * depthHeight);
 
-            var points = new List<PointXYZRGB>(verticies.Length);
+<<<<<<< HEAD
+            var data = new GestureCameraData(depthWidth, depthHeight, colorWidth, colorHeight, colorImage);
+=======
+            int blobWidth = (int)blob.info.width;
+            int blobHeight = (int)blob.info.height;
+            var blobImage = blobData.ToByteArray(0, blobWidth * blobHeight);
+
+            var data = new GestureCameraData(depthWidth, depthHeight, colorWidth, colorHeight, colorImage, blobImage, blobInfo.labelBackground, gestureDataList);
+>>>>>>> develop
             for (int j = 0; j < depthHeight; ++j)
                 for (int i = 0; i < depthWidth; ++i)
                 {
@@ -156,10 +185,16 @@ namespace OculuSLAM.Models
                     x *= _unit_m;
                     y *= _unit_m;
                     z *= _unit_m;
+<<<<<<< HEAD
                     float b = colorImage[3 * (colorY * colorWidth + colorX) + 0] / 255.0f;
                     float g = colorImage[3 * (colorY * colorWidth + colorX) + 1] / 255.0f;
                     float r = colorImage[3 * (colorY * colorWidth + colorX) + 2] / 255.0f;
-                    points.Add(new PointXYZRGB(x, y, z, r, g, b));
+
+                    data.Set(i, j, new Point(u, v, x, y, z, r, g, b));
+=======
+
+                    data.Set(i, j, new Point(u, v, x, y, z));
+>>>>>>> develop
                 }
 
             GestureCameraUtil.Assert(
@@ -170,13 +205,13 @@ namespace OculuSLAM.Models
                 "Failed to release access on depth image.");
             _pipeline.ReleaseFrame();
 
-            RaiseOnUpdated(PointCloud.CreateFromExternalBuffer(points));
+            RaiseOnUpdated(data);
         }
 
-        void RaiseOnUpdated(PointCloud cloud)
+        void RaiseOnUpdated(GestureCameraData data)
         {
             if (OnUpdated != null)
-                OnUpdated(this, new OnUpdatedEventArgs(cloud));
+                OnUpdated(this, new OnUpdatedEventArgs(data));
         }
         #endregion
 
@@ -259,11 +294,11 @@ namespace OculuSLAM.Models
         /// </summary>
         public class OnUpdatedEventArgs : EventArgs
         {
-            public PointCloud Cloud { get; private set; }
+            public GestureCameraData Data { get; private set; }
 
-            internal OnUpdatedEventArgs(PointCloud cloud)
+            internal OnUpdatedEventArgs(GestureCameraData data)
             {
-                Cloud = cloud;
+                Data = data;
             }
         }
         #endregion

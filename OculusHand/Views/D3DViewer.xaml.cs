@@ -12,14 +12,12 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-using _3DTools;
 using System.Windows.Media.Media3D;
-using OculuSLAM.ViewModels;
-using OculuSLAM.Models;
+using OculusHand.ViewModels;
+using OculusHand.Models;
 using System.ComponentModel;
-using OpenCvSharp.CPlusPlus;
 
-namespace OculuSLAM.Views
+namespace OculusHand.Views
 {
     /* 
      * ViewModelからの変更通知などの各種イベントを受け取る場合は、PropertyChangedWeakEventListenerや
@@ -35,13 +33,6 @@ namespace OculuSLAM.Views
     public partial class D3DViewer : UserControl
     {
         ///////////////////////////////////////////////
-        #region 内部変数
-
-        Trackball _trackball;
-
-        #endregion
-
-        ///////////////////////////////////////////////
         #region Public Methods
 
         /// <summary>
@@ -52,14 +43,6 @@ namespace OculuSLAM.Views
             InitializeComponent();
 
             _viewModel = new D3DViewerViewModel();
-
-            //Trackballの初期化
-            _trackball = new Trackball();
-            _trackball.EventSource = mouseCapture;
-            mouseCapture.MouseMove += (o, e) =>
-                {
-                    ViewModel.UpdateMatrix(_trackball.Transform.Value);
-                };
 
             //レンダリングの設定
             CompositionTarget.Rendering += (o, e) => { ViewModel.Render(); };
@@ -81,72 +64,157 @@ namespace OculuSLAM.Views
         #endregion
 
         ///////////////////////////////////////////////
+
         #region Points依存関係プロパティ
         /// <summary>
         /// 表示する点群データです。
         /// </summary>
         [Bindable(true)]
-        public PointCloud Points
+        public Mesh Mesh
         {
-            get { return (PointCloud)GetValue(PointsProperty); }
-            set { SetValue(PointsProperty, value); }
+            get { return (Mesh)GetValue(MeshProperty); }
+            set { SetValue(MeshProperty, value); }
         }
 
         /// <summary>
         /// 点群データの依存関係プロパティです。値が更新された際に、表示される点群が更新されます。
         /// </summary>
-        public static readonly DependencyProperty PointsProperty =
+        public static readonly DependencyProperty MeshProperty =
             DependencyProperty.Register(
-                "Points",
-                typeof(PointCloud), 
+                "Mesh",
+                typeof(Mesh), 
                 typeof(D3DViewer), 
                 new FrameworkPropertyMetadata(
-                    new PointCloud(), 
+                    new Mesh(), 
                     FrameworkPropertyMetadataOptions.AffectsRender, 
                     new PropertyChangedCallback(onPointsChanged)
                 )
             );
 
         //依存関係プロパティが更新されると、VMに点群の更新を通知します。
-        private static void onPointsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        static void onPointsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
+<<<<<<< HEAD
             D3DViewer viewer = d as D3DViewer;
             if (viewer != null && e.NewValue != null)
-                viewer.ViewModel.UpdatePoints((PointCloud)e.NewValue);
+                viewer.ViewModel.UpdateMesh((Mesh)e.NewValue);
+=======
+            var viewer = d as D3DViewer;
+            var value = e.NewValue as Mesh;
+            if (viewer != null && value != null)
+                viewer.ViewModel.UpdateMesh(value);
         }
+
         #endregion
 
-        #region Transform依存関係プロパティ
+        #region Orientation依存関係プロパティ
         /// <summary>
-        /// カメラの位置姿勢です。
+        /// 背景画像の向きです。
         /// </summary>
         [Bindable(true)]
-        public Mat Transform
+        public Matrix3D Orientation
         {
-            get { return (Mat)GetValue(TransformProperty); }
-            set { SetValue(TransformProperty, value); }
+            get { return (Matrix3D)GetValue(OrientationProperty); }
+            set { SetValue(OrientationProperty, value); }
         }
 
         /// <summary>
-        /// カメラの位置姿勢の依存関係プロパティです。値が更新された際に、表示されるカメラ座標が更新されます。
+        /// 背景画像の向きの依存関係プロパティです。
         /// </summary>
-        public static readonly DependencyProperty TransformProperty =
+        public static readonly DependencyProperty OrientationProperty =
             DependencyProperty.Register(
-                "Transform", 
-                typeof(Mat), 
+                "Orientation", 
+                typeof(Matrix3D), 
                 typeof(D3DViewer), 
                 new FrameworkPropertyMetadata(
-                    Mat.Eye(4, 4, MatType.CV_32F).ToMat(), 
+                    Matrix3D.Identity, 
                     FrameworkPropertyMetadataOptions.AffectsRender, 
-                    new PropertyChangedCallback(onTransformChanged)));
+                    new PropertyChangedCallback(onOrientationChanged)
+                )
+            );
 
-        //依存関係プロパティが更新されると、VMに位置姿勢の更新を通知します。
-        private static void onTransformChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        //依存関係プロパティが更新されると、VMに背景画像の向きの更新を通知します。
+        static void onOrientationChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            D3DViewer viewer = d as D3DViewer;
-            if (viewer != null && e.NewValue != null)
-                viewer.ViewModel.UpdateTransform((Mat)e.NewValue);
+            var viewer = d as D3DViewer;
+            if (viewer != null && e.NewValue is Matrix3D)
+                viewer.ViewModel.UpdateOrientation((Matrix3D)e.NewValue);
+        }
+
+        #endregion
+
+        #region OculusDistortionParameter依存関係プロパティ
+
+        /// <summary>
+        /// OculusのためのDistortion向けのパラメータです。
+        /// </summary>
+        public OculusDistortionParameter DistortionParameter
+        {
+            get { return (OculusDistortionParameter)GetValue(DistortionParameterProperty); }
+            set { SetValue(DistortionParameterProperty, value); }
+        }
+
+        /// <summary>
+        /// OculusのためのDistortionのパラメータの依存関係プロパティです。
+        /// </summary>
+        public static readonly DependencyProperty DistortionParameterProperty =
+            DependencyProperty.Register(
+                "DistortionParameter", 
+                typeof(OculusDistortionParameter), 
+                typeof(D3DViewer), 
+                new FrameworkPropertyMetadata(
+                    new OculusDistortionParameter(), 
+                    FrameworkPropertyMetadataOptions.AffectsRender, 
+                    new PropertyChangedCallback(onDistortionParameterUpdated)));
+
+        //依存関係プロパティが更新されると、VMにパラメータの更新を通知します。
+        static void onDistortionParameterUpdated(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            var viewer = d as D3DViewer;
+            var value = e.NewValue as OculusDistortionParameter;
+            if (viewer != null && value != null)
+                viewer.ViewModel.UpdateDistortionParameter(value);
+        }
+
+        #endregion
+
+        #region BackgroundImagePath依存関係プロパティ
+        /// <summary>
+        /// 背景画像のパスです。
+        /// </summary>
+        public string BackgroundImagePath
+        {
+            get { return (string)GetValue(BackgroundImagePathProperty); }
+            set { SetValue(BackgroundImagePathProperty, value); }
+        }
+
+        /// <summary>
+        /// 背景画像のパスの依存関係プロパティです。
+        /// </summary>
+        public static readonly DependencyProperty BackgroundImagePathProperty =
+            DependencyProperty.Register(
+                "BackgroundImagePath", 
+                typeof(string), 
+                typeof(D3DViewer), 
+                new FrameworkPropertyMetadata(
+                    "",
+                    FrameworkPropertyMetadataOptions.AffectsRender, 
+                    new PropertyChangedCallback(onBackgroundImagePathUpdated)));
+
+        /// <summary>
+        /// 依存関係プロパティが更新されると、VMにパラメータの更新を通知します。
+        /// </summary>
+        /// <param name="d"></param>
+        /// <param name="e"></param>
+        static void onBackgroundImagePathUpdated(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            var viewer = d as D3DViewer;
+            var value = e.NewValue as string;
+            if (viewer != null && value != null)
+                viewer.ViewModel.UpdateBackground(value);
+>>>>>>> develop
         }
         #endregion
+
     }
 }

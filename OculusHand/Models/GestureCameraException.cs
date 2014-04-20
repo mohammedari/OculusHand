@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace OculuSLAM.Models
+namespace OculusHand.Models
 {
     [Serializable]
     public class GestureCameraException : ApplicationException
