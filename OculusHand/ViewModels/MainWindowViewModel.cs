@@ -42,14 +42,31 @@ namespace OculusHand.ViewModels
                 config.Parameters.HandRecognitionPixelSkip);
 
             _path = config.Parameters.BackgroundImagePath;
-            var files = Directory.GetFiles(_path, "*.jpg");
-            if (files.Length == 0)
-                throw new InvalidOperationException("Failed to find background image file.");
+            var files = new List<string>();
+            foreach (var pattern in new string[] { "*.jpg", "*.jpeg" })
+            {
+                try
+                {
+                    files.AddRange(Directory.GetFiles(_path, pattern));
+                }
+                catch (DirectoryNotFoundException)
+                {
+                }
+                catch (FileNotFoundException)
+                {
+                }
+            }
+
+            if (files.Count == 0)
+            {
+                ErrorMessage = "Failed to find background image file.";
+                return;
+            }
 
             var rand = new Random();
-            _backgroundImageIndex = (uint)rand.Next(files.Length);
+            _backgroundImageIndex = (uint)rand.Next(files.Count);
 
-            BackgroundImagePath = files[_backgroundImageIndex];
+            BackgroundImagePath = files[(int)_backgroundImageIndex];
         }
 
         ~MainWindowViewModel()

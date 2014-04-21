@@ -215,7 +215,7 @@ namespace OculusHand.ViewModels
             _effect.SetValue("ThetaMappingDepth", thetaMappingDepth);
 
             //Barrel Distortion用のテクスチャを作成
-            _distortion = new Texture(_device, backBufferWidth, backBufferHeight, 1, Usage.RenderTarget, Format.X8B8G8R8, Pool.Default);
+            _distortion = new Texture(_device, backBufferWidth, backBufferHeight, 1, Usage.RenderTarget, Format.A8R8G8B8, Pool.Default);
             var handle = _effect.GetParameter(null, "Distortion");
             _effect.SetTexture(handle, _distortion);
 
