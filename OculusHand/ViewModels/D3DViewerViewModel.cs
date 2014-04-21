@@ -130,6 +130,24 @@ namespace OculusHand.ViewModels
         }
 
         /// <summary>
+        /// レンダリングの際に用いる行列を更新します。
+        /// </summary>
+        /// <param name="matrix">平行回転行列の値</param>
+        public void UpdateMatrix(Matrix3D matrix)
+        {
+            if (!matrix.HasInverse)
+                return;
+
+            matrix.Invert();    //なんか反転しなくちゃダメだった？
+
+            float[] mat = { (float)matrix.M11,      (float)matrix.M12,      (float)matrix.M13,      (float)matrix.M14, 
+                            (float)matrix.M21,      (float)matrix.M22,      (float)matrix.M23,      (float)matrix.M24, 
+                            (float)matrix.M31,      (float)matrix.M32,      (float)matrix.M33,      (float)matrix.M34, 
+                            (float)matrix.OffsetX,  (float)matrix.OffsetY,  (float)matrix.OffsetZ,  (float)matrix.M44, };
+            _effect.SetValue("Transform", mat);
+        }
+
+        /// <summary>
         /// 背景レンダリングの際に用いる画像の方向を更新します。
         /// </summary>
         public void UpdateOrientation(Matrix3D matrix)
@@ -416,14 +434,14 @@ namespace OculusHand.ViewModels
             _effect.EndPass();
 
             //Wire frame
-            //_device.SetRenderState(RenderState.FillMode, FillMode.Wireframe);
-            //_effect.BeginPass(1);
-            //if (0 < _vertexCount && 0 < _indexCount)
-            //    lock (_bufferUpdateLock)
-            //    {
-            //        _device.DrawIndexedPrimitive(PrimitiveType.TriangleList, 0, 0, _vertexCount, 0, _indexCount / 3);
-            //    }
-            //_effect.EndPass();
+            _device.SetRenderState(RenderState.FillMode, FillMode.Wireframe);
+            _effect.BeginPass(1);
+            if (0 < _vertexCount && 0 < _indexCount)
+                lock (_bufferUpdateLock)
+                {
+                    _device.DrawIndexedPrimitive(PrimitiveType.TriangleList, 0, 0, _vertexCount, 0, _indexCount / 3);
+                }
+            _effect.EndPass();
         }
 
         void drawBarrelDistortion()

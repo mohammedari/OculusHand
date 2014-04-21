@@ -12,6 +12,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
+using _3DTools;
 using System.Windows.Media.Media3D;
 using OculusHand.ViewModels;
 using OculusHand.Models;
@@ -33,6 +34,13 @@ namespace OculusHand.Views
     public partial class D3DViewer : UserControl
     {
         ///////////////////////////////////////////////
+        #region 内部変数
+
+        Trackball _trackball;
+
+        #endregion
+
+        ///////////////////////////////////////////////
         #region Public Methods
 
         /// <summary>
@@ -43,6 +51,14 @@ namespace OculusHand.Views
             InitializeComponent();
 
             _viewModel = new D3DViewerViewModel();
+
+            //Trackballの初期化
+            _trackball = new Trackball();
+            _trackball.EventSource = mouseCapture;
+            mouseCapture.MouseMove += (o, e) =>
+                {
+                    ViewModel.UpdateMatrix(_trackball.Transform.Value);
+                };
 
             //レンダリングの設定
             CompositionTarget.Rendering += (o, e) => { ViewModel.Render(); };
@@ -64,7 +80,6 @@ namespace OculusHand.Views
         #endregion
 
         ///////////////////////////////////////////////
-
         #region Points依存関係プロパティ
         /// <summary>
         /// 表示する点群データです。
@@ -100,9 +115,6 @@ namespace OculusHand.Views
                 viewer.ViewModel.UpdateMesh(value);
         }
 
-        #endregion
-
-        #region Orientation依存関係プロパティ
         /// <summary>
         /// 背景画像の向きです。
         /// </summary>
@@ -136,10 +148,6 @@ namespace OculusHand.Views
                 viewer.ViewModel.UpdateOrientation((Matrix3D)e.NewValue);
         }
 
-        #endregion
-
-        #region OculusDistortionParameter依存関係プロパティ
-
         /// <summary>
         /// OculusのためのDistortion向けのパラメータです。
         /// </summary>
@@ -171,7 +179,6 @@ namespace OculusHand.Views
                 viewer.ViewModel.UpdateDistortionParameter(value);
         }
 
-        #endregion
 
         #region BackgroundImagePath依存関係プロパティ
         /// <summary>
@@ -188,12 +195,12 @@ namespace OculusHand.Views
         /// </summary>
         public static readonly DependencyProperty BackgroundImagePathProperty =
             DependencyProperty.Register(
-                "BackgroundImagePath", 
-                typeof(string), 
-                typeof(D3DViewer), 
+                "BackgroundImagePath",
+                typeof(string),
+                typeof(D3DViewer),
                 new FrameworkPropertyMetadata(
                     "",
-                    FrameworkPropertyMetadataOptions.AffectsRender, 
+                    FrameworkPropertyMetadataOptions.AffectsRender,
                     new PropertyChangedCallback(onBackgroundImagePathUpdated)));
 
         /// <summary>
@@ -210,5 +217,7 @@ namespace OculusHand.Views
         }
         #endregion
 
+
+        #endregion
     }
 }

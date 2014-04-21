@@ -61,6 +61,10 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="3DTools, Version=1.0.2614.20437, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>InfrastructureAssemblies\3DTools.dll</HintPath>
+    </Reference>
     <Reference Include="libpxcclr, Version=1.0.0.0, Culture=neutral, processorArchitecture=x86">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>InfrastructureAssemblies\libpxcclr.dll</HintPath>
@@ -174,6 +178,7 @@
     <Resource Include="OculusVr-license.txt" />
     <Resource Include="Images\VrPlayer-copyright.txt" />
     <Resource Include="Images\VrPlayer-license.txt" />
+    <Content Include="InfrastructureAssemblies\3DTools.dll" />
     <Content Include="RiftWrapper.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
