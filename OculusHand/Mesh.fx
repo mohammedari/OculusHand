@@ -9,6 +9,8 @@ float ThetaMappingDepth;
 float4 DistortionParameter;
 float LensHorizontalDistanceRatioFromCenter;
 
+float OffsetU;
+
 static const float PI = 3.14159265358979323846264;
 
 texture HandTexture : TEXTURE0;
@@ -44,6 +46,16 @@ sampler2D DistortionSampler = sampler_state
 	AddressV  = Clamp;
 };
 
+texture Offset : TEXTURE3;
+sampler2D OffsetSampler = sampler_state
+{
+	Texture = (Offset);
+    MinFilter = Linear;
+    MagFilter = Linear;
+    MipFilter = Linear;   
+	AddressU  = Clamp;
+	AddressV  = Clamp;
+};
 
 //////////////////////////////////////////////////////////////
 
@@ -166,6 +178,29 @@ float4 PixelShaderDistortion(const PixelShaderInput input) : COLOR0
 
 //////////////////////////////////////////////////////////////
 
+VertexShaderOutput VertexShaderOffset(const VertexShaderInput input)
+{
+	VertexShaderOutput output;
+	output.Position = float4(input.Position, 1.0);
+
+	float u, v;
+	u = saturate(output.Position.x / 2 + 0.5);
+	v = saturate(-output.Position.y / 2 + 0.5);
+
+	output.Texture = float2(u, v);
+
+	return output;
+}
+
+float4 PixelShaderOffset(const PixelShaderInput input) : COLOR0
+{
+	float2 uv = input.Texture;
+	uv.x -= OffsetU;
+	return saturate(tex2D(OffsetSampler, uv));
+}
+
+//////////////////////////////////////////////////////////////
+
 technique Mesh
 {
 	pass p0
@@ -196,5 +231,11 @@ technique Mesh
 	{
 		VertexShader = compile vs_2_0 VertexShaderDistortion();
 		PixelShader = compile ps_2_0 PixelShaderDistortion();
+	}
+
+	pass p5
+	{
+		VertexShader = compile vs_2_0 VertexShaderOffset();
+		PixelShader = compile ps_2_0 PixelShaderOffset();
 	}
 }

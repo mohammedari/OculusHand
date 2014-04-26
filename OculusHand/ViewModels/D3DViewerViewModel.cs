@@ -49,6 +49,7 @@ namespace OculusHand.ViewModels
         int _surfaceIndexCount;
 
         Texture _distortion;
+        Texture _offset;
 
         #endregion
 
@@ -90,7 +91,8 @@ namespace OculusHand.ViewModels
                 config.Parameters.DistortionThetaMappingDepth, 
                 config.Parameters.CameraPitchAngle, 
                 config.Parameters.CameraOffsetY, 
-                config.Parameters.CameraScale
+                config.Parameters.CameraScale, 
+                config.Parameters.OffsetU
                 );
         }
 
@@ -178,7 +180,7 @@ namespace OculusHand.ViewModels
 
         void initializeDirect3D(int backBufferWidth, int backBufferHeight, 
                                 int surfaceResolutionWidth, int surfaceResolutionHeight, float thetaMappingDepth,
-                                double cameraPitchAngle, double cameraOffsetY, double cameraScale)
+                                double cameraPitchAngle, double cameraOffsetY, double cameraScale, float offsetU)
         {
             PresentParameters pp = new PresentParameters()
             {
@@ -216,8 +218,12 @@ namespace OculusHand.ViewModels
 
             //Barrel Distortion用のテクスチャを作成
             _distortion = new Texture(_device, backBufferWidth, backBufferHeight, 1, Usage.RenderTarget, Format.A8R8G8B8, Pool.Default);
-            var handle = _effect.GetParameter(null, "Distortion");
-            _effect.SetTexture(handle, _distortion);
+            _effect.SetTexture(_effect.GetParameter(null, "Distortion"), _distortion);
+
+            //オフセット表示用のテクスチャを作成
+            _offset = new Texture(_device, backBufferWidth, backBufferHeight, 1, Usage.RenderTarget, Format.A8R8G8B8, Pool.Default);
+            _effect.SetTexture(_effect.GetParameter(null, "Offset"), _offset);
+            _effect.SetValue("OffsetU", offsetU);
 
             //Handメッシュの座標変換を設定
             var matrix = Matrix3D.Identity;
@@ -370,14 +376,26 @@ namespace OculusHand.ViewModels
             _effect.End();
             _device.EndScene();
 
-            //Distortion用のテクスチャを使って画面を描画
-            _device.SetRenderTarget(0, renderTarget);
+            //Offset用のテクスチャに最終画面を描画
+            _device.SetRenderTarget(0, _offset.GetSurfaceLevel(0));
 
             _device.Clear(ClearFlags.Target, background, 0, 0);
             _device.BeginScene();
             _effect.Begin();
 
             drawBarrelDistortion();
+
+            _effect.End();
+            _device.EndScene();
+
+            //最終画面をオフセットして描画
+            _device.SetRenderTarget(0, renderTarget);
+
+            _device.Clear(ClearFlags.Target, background, 0, 0);
+            _device.BeginScene();
+            _effect.Begin();
+
+            drawOffset();
 
             _effect.End();
             _device.EndScene();
@@ -433,6 +451,17 @@ namespace OculusHand.ViewModels
 
             _device.SetRenderState(RenderState.FillMode, FillMode.Solid);
             _effect.BeginPass(4);
+            _device.DrawIndexedPrimitive(PrimitiveType.TriangleList, 0, 0, _surfaceVertexCount, 0, _surfaceIndexCount / 3);
+            _effect.EndPass();
+        }
+
+        void drawOffset()
+        {
+            _device.SetStreamSource(0, _surfaceVertexBuffer, 0, Marshal.SizeOf(typeof(Vertex)));
+            _device.Indices = _surfaceIndexBuffer;
+
+            _device.SetRenderState(RenderState.FillMode, FillMode.Solid);
+            _effect.BeginPass(5);
             _device.DrawIndexedPrimitive(PrimitiveType.TriangleList, 0, 0, _surfaceVertexCount, 0, _surfaceIndexCount / 3);
             _effect.EndPass();
         }

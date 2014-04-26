@@ -27,6 +27,9 @@ namespace OculusHand.ViewModels
         string _path;
         uint _backgroundImageIndex;
 
+        DateTime _previousUpdateTime = DateTime.Now;
+        double _backgroundImageAutoUpdateInterval;
+
         public void Initialize()
         {
             var config = Util.GetConfigManager();
@@ -67,6 +70,7 @@ namespace OculusHand.ViewModels
             _backgroundImageIndex = (uint)rand.Next(files.Count);
 
             BackgroundImagePath = files[(int)_backgroundImageIndex];
+            _backgroundImageAutoUpdateInterval = config.Parameters.BackgroundImageAutoUpdateInterval;
         }
 
         ~MainWindowViewModel()
@@ -223,6 +227,12 @@ namespace OculusHand.ViewModels
                 updateBackgroundImage(1);
             else if (e.Data.IsGestureSwipeLeft)
                 updateBackgroundImage(-1);
+
+            if (DateTime.Now - _previousUpdateTime > TimeSpan.FromSeconds(_backgroundImageAutoUpdateInterval))
+            {
+                updateBackgroundImage(1);
+                _previousUpdateTime = DateTime.Now;
+            }
         }
 
         void updateBackgroundImage(int i)
