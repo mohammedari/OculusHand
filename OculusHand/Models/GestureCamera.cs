@@ -191,6 +191,9 @@ namespace OculusHand.Models
             GestureCameraUtil.Assert(
                 depth.ReleaseAccess(ref depthData),
                 "Failed to release access on depth image.");
+            GestureCameraUtil.Assert(
+                blob.ReleaseAccess(ref blobData),
+                "Failed to release access to blob data)");
             _pipeline.ReleaseFrame();
 
             RaiseOnUpdated(data);

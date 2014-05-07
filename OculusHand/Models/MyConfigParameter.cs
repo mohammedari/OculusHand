@@ -29,6 +29,9 @@ namespace OculusHand.Models
         public double CameraOffsetY { get; set; }
         public double CameraScale { get; set; }
 
+        public float OffsetU { get; set; }
+        public double BackgroundImageAutoUpdateInterval { get; set; }
+
         public override void Initialize()
         {
             DeviceName = "";
@@ -44,11 +47,14 @@ namespace OculusHand.Models
             DistortionSurfaceResolutionWidth = 80;
             DistortionSurfaceResolutionHeight = 45;
             DistortionThetaMappingDepth = 1f;
-            BackgroundImagePath = @"Images\VrPlayerSample.jpg";
+            BackgroundImagePath = @"Images\";
 
             CameraPitchAngle = -5;
             CameraOffsetY = 0.15;
             CameraScale = 2;
+
+            OffsetU = 0.045f;
+            BackgroundImageAutoUpdateInterval = 30;
         }
 
         public override object Clone()

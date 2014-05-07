@@ -162,6 +162,7 @@
     </EmbeddedResource>
     <None Include="OculusHand.config">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <SubType>Designer</SubType>
     </None>
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
@@ -172,8 +173,6 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="OculusVr-license.txt" />
-    <Resource Include="Images\VrPlayer-copyright.txt" />
-    <Resource Include="Images\VrPlayer-license.txt" />
     <Content Include="RiftWrapper.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

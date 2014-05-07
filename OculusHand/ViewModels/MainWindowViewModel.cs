@@ -27,6 +27,9 @@ namespace OculusHand.ViewModels
         string _path;
         uint _backgroundImageIndex;
 
+        DateTime _previousUpdateTime = DateTime.Now;
+        double _backgroundImageAutoUpdateInterval;
+
         public void Initialize()
         {
             var config = Util.GetConfigManager();
@@ -42,14 +45,32 @@ namespace OculusHand.ViewModels
                 config.Parameters.HandRecognitionPixelSkip);
 
             _path = config.Parameters.BackgroundImagePath;
-            var files = Directory.GetFiles(_path, "*.jpg");
-            if (files.Length == 0)
-                throw new InvalidOperationException("Failed to find background image file.");
+            var files = new List<string>();
+            foreach (var pattern in new string[] { "*.jpg", "*.jpeg" })
+            {
+                try
+                {
+                    files.AddRange(Directory.GetFiles(_path, pattern));
+                }
+                catch (DirectoryNotFoundException)
+                {
+                }
+                catch (FileNotFoundException)
+                {
+                }
+            }
+
+            if (files.Count == 0)
+            {
+                ErrorMessage = "Failed to find background image file.";
+                return;
+            }
 
             var rand = new Random();
-            _backgroundImageIndex = (uint)rand.Next(files.Length);
+            _backgroundImageIndex = (uint)rand.Next(files.Count);
 
-            BackgroundImagePath = files[_backgroundImageIndex];
+            BackgroundImagePath = files[(int)_backgroundImageIndex];
+            _backgroundImageAutoUpdateInterval = config.Parameters.BackgroundImageAutoUpdateInterval;
         }
 
         ~MainWindowViewModel()
@@ -206,6 +227,12 @@ namespace OculusHand.ViewModels
                 updateBackgroundImage(1);
             else if (e.Data.IsGestureSwipeLeft)
                 updateBackgroundImage(-1);
+
+            if (DateTime.Now - _previousUpdateTime > TimeSpan.FromSeconds(_backgroundImageAutoUpdateInterval))
+            {
+                updateBackgroundImage(1);
+                _previousUpdateTime = DateTime.Now;
+            }
         }
 
         void updateBackgroundImage(int i)
