@@ -302,6 +302,9 @@ namespace OculusHand.ViewModels
             var size = Marshal.SizeOf(typeof(int));
             if (_indexBuffer == null || _indexCount < arr.Length)
             {
+                if (null != _indexBuffer)
+                    _indexBuffer.Dispose();
+
                 _indexBuffer = new IndexBuffer(_device, size * arr.Length, Usage.WriteOnly | Usage.Dynamic, Pool.Default, false);
             }
 
@@ -316,6 +319,9 @@ namespace OculusHand.ViewModels
             var size = Marshal.SizeOf(typeof(Vertex));
             if (_vertexBuffer == null || _vertexCount < arr.Length)
             {
+                if (null != _vertexBuffer)
+                    _vertexBuffer.Dispose();
+
                 _vertexBuffer = new VertexBuffer(_device, size * arr.Length, Usage.WriteOnly | Usage.Dynamic, Vertex.Format, Pool.Default);
             }
 
