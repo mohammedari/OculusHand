@@ -1,0 +1,5 @@
+Copyright 2012-2013 Stephane Levesque
+http://vrplayer.codeplex.com/
+
+Licensed under the terms of the GNU Lesser General Public License (LGPL).
+See license.txt for details.

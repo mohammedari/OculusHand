@@ -13,7 +13,12 @@ using Livet.Messaging.Windows;
 
 using OculusHand.Models;
 using SharpDX;
-using SharpDX.Direct3D9;
+using SharpDX.DXGI;
+using SharpDX.D3DCompiler;
+using Dx9 = SharpDX.Direct3D9;
+using SharpDX.Direct3D10;
+using Device = SharpDX.Direct3D10.Device;
+using Buffer = SharpDX.Direct3D10.Buffer;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media.Media3D;
@@ -30,44 +35,54 @@ namespace OculusHand.ViewModels
         ////////////////////////////////////////////////////
         #region 内部変数
 
-        readonly ColorBGRA _fillColor = SharpDX.Color.White;
+        readonly Color4 _fillColor = SharpDX.Color.White;
 
         Device _device;
         Effect _effect;
+        EffectTechnique _technique;
 
         object _bufferUpdateLock = new object();
         int _vertexCount;
         int _indexCount;
-        VertexBuffer _vertexBuffer;
-        IndexBuffer _indexBuffer;
-        Texture _texture;
+        Buffer _vertexBuffer;
+        Buffer _indexBuffer;
+        Texture2D _texture;
 
-        VertexBuffer _surfaceVertexBuffer;
-        IndexBuffer _surfaceIndexBuffer;
-        Texture _background;
+        Buffer _surfaceVertexBuffer;
+        Buffer _surfaceIndexBuffer;
+        Texture2D _background;
         int _surfaceVertexCount;
         int _surfaceIndexCount;
 
-        Texture _distortion;
-        Texture _offset;
+        Texture2D _distortion;
+        Texture2D _offset;
+        Texture2D _renderTarget;
+        Texture2D _depthStencil;
+
+        RenderTargetView _distortionView;
+        RenderTargetView _offsetView;
+        RenderTargetView _renderTargetView;
+        DepthStencilView _depthStencilView;
+
+        int _width, _height;
 
         #endregion
 
         ////////////////////////////////////////////////////
         #region ImageSource変更通知プロパティ
-        private D3DImage _ImageSource;
+        private DX10ImageSource _imageSource;
         /// <summary>
         /// レンダリング結果の画像イメージです。ViewのImageSourceにバインドしてください。
         /// </summary>
-        public D3DImage ImageSource
+        public DX10ImageSource ImageSource
         {
             get
-            { return _ImageSource; }
+            { return _imageSource; }
             set
             { 
-                if (_ImageSource == value)
+                if (_imageSource == value)
                     return;
-                _ImageSource = value;
+                _imageSource = value;
                 RaisePropertyChanged("ImageSource");
             }
         }
@@ -80,7 +95,7 @@ namespace OculusHand.ViewModels
         /// </summary>
         public D3DViewerViewModel()
         {
-            ImageSource = new D3DImage();
+            _imageSource = new DX10ImageSource();
 
             var config = Util.GetConfigManager();
             initializeDirect3D(
@@ -136,11 +151,11 @@ namespace OculusHand.ViewModels
         /// </summary>
         public void UpdateOrientation(Matrix3D matrix)
         {
-            float[] mat = { (float)matrix.M11,      (float)matrix.M12,      (float)matrix.M13,      (float)matrix.M14, 
+            float[] matValues = { (float)matrix.M11,      (float)matrix.M12,      (float)matrix.M13,      (float)matrix.M14, 
                             (float)matrix.M21,      (float)matrix.M22,      (float)matrix.M23,      (float)matrix.M24, 
                             (float)matrix.M31,      (float)matrix.M32,      (float)matrix.M33,      (float)matrix.M34, 
                             (float)matrix.OffsetX,  (float)matrix.OffsetY,  (float)matrix.OffsetZ,  (float)matrix.M44, };
-            _effect.SetValue("OculusOrientation", mat);
+            _effect.GetVariableByName("OculusOrientation").AsMatrix().SetMatrix(new Matrix(matValues));
         }
 
         /// <summary>
@@ -149,8 +164,11 @@ namespace OculusHand.ViewModels
         /// <param name="parameter">Distortionパラメータ</param>
         public void UpdateDistortionParameter(OculusDistortionParameter parameter)
         {
-            _effect.SetValue("DistortionParameter", parameter.DistortionK);
-            _effect.SetValue("LensHorizontalDistanceRatioFromCenter", parameter.LensSeparationDistance / parameter.ScreenWidthDistance);
+            _effect.GetVariableByName("DistortionParameter").AsVector().Set(new Vector4(parameter.DistortionK));
+
+            //[TODO]正しいパラメータを適用する
+            //_effect.GetVariableByName("LensHorizontalDistanceRatioFromCenter").AsScalar().Set(parameter.LensSeparationDistance / parameter.ScreenWidthDistance);
+            _effect.GetVariableByName("LensHorizontalDistanceRatioFromCenter").AsScalar().Set(Util.GetConfigManager().Parameters.LensHorizontalDistanceRatioFromCenter);
         }
 
         /// <summary>
@@ -161,9 +179,8 @@ namespace OculusHand.ViewModels
             if (_background != null)
                 _background.Dispose();
 
-            _background = Texture.FromFile(_device, filename);
-            var handle = _effect.GetParameter(null, "BackgroundImage");
-            _effect.SetTexture(handle, _background);
+            _background = Texture2D.FromFile<Texture2D>(_device, filename);
+            _effect.GetVariableByName("BackgroundImage").AsShaderResource().SetResource(new ShaderResourceView(_device, _background));
         }
 
         /// <summary>
@@ -171,7 +188,7 @@ namespace OculusHand.ViewModels
         /// </summary>
         public void Render()
         {
-            render(_fillColor);
+            render(_fillColor, _width, _height);
         }
         #endregion
 
@@ -182,48 +199,84 @@ namespace OculusHand.ViewModels
                                 int surfaceResolutionWidth, int surfaceResolutionHeight, float thetaMappingDepth,
                                 double cameraPitchAngle, double cameraOffsetY, double cameraScale, float offsetU)
         {
-            PresentParameters pp = new PresentParameters()
+            _width = backBufferWidth;
+            _height = backBufferHeight;
+
+            //バックバッファのフォーマット
+            Texture2DDescription colordesc = new Texture2DDescription
             {
-                DeviceWindowHandle = IntPtr.Zero,
+                BindFlags = BindFlags.RenderTarget | BindFlags.ShaderResource,
+                Format = Format.B8G8R8A8_UNorm,
+                Width = backBufferWidth,
+                Height = backBufferHeight,
+                MipLevels = 1,
+                SampleDescription = new SampleDescription(1, 0),
+                Usage = ResourceUsage.Default,
+                OptionFlags = ResourceOptionFlags.Shared,
+                CpuAccessFlags = CpuAccessFlags.None,
+                ArraySize = 1
+            };
 
-                EnableAutoDepthStencil = false,
-
-                MultiSampleType = MultisampleType.None,
-
-                BackBufferCount = 2,
-                BackBufferWidth = backBufferWidth,
-                BackBufferHeight = backBufferHeight,
-                BackBufferFormat = Format.A8R8G8B8,
-
-                PresentationInterval = PresentInterval.One,
-                PresentFlags = PresentFlags.None,
-                SwapEffect = SwapEffect.Flip,
-                Windowed = true,
+            //デプスステンシルのフォーマット
+            //BackBufferと同じサイズで、出力結合ステージで使用
+            Texture2DDescription depthdesc = new Texture2DDescription
+            {
+                BindFlags = BindFlags.DepthStencil,
+                Format = Format.D32_Float_S8X24_UInt,
+                Width = backBufferWidth,
+                Height = backBufferHeight,
+                MipLevels = 1,
+                SampleDescription = new SampleDescription(1, 0),
+                Usage = ResourceUsage.Default,
+                OptionFlags = ResourceOptionFlags.None,
+                CpuAccessFlags = CpuAccessFlags.None,
+                ArraySize = 1,
             };
 
             //デバイスの作成
-            _device = new Device(new Direct3DEx(), 0, DeviceType.Hardware, IntPtr.Zero, CreateFlags.HardwareVertexProcessing | CreateFlags.Multithreaded, pp);
-            _device.VertexFormat = Vertex.Format;
+            //[TODO]Debug
+            //_device = new Device(DriverType.Hardware, DeviceCreationFlags.BgraSupport | DeviceCreationFlags.Debug);
+            _device = new Device(DriverType.Hardware, DeviceCreationFlags.BgraSupport);
 
             //エフェクトの作成
-            _effect = Effect.FromFile(_device, "Mesh.fx", ShaderFlags.OptimizationLevel3);
-            _effect.Technique = "Mesh";
-            _effect.SetValue("Transform", Matrix.Identity);
+            var compileResult = ShaderBytecode.CompileFromFile("Mesh.fx", "fx_4_0", ShaderFlags.OptimizationLevel3, EffectFlags.None, null, null);
+            if (compileResult.HasErrors)
+                throw new InvalidOperationException("Effect file includes compilation errors. " + compileResult.Message); 
+            _effect = new Effect(_device, compileResult.Bytecode);
+            _effect.GetVariableByName("Transform").AsMatrix().SetMatrix(Matrix.Identity);
+            _technique = _effect.GetTechniqueByName("Mesh");
+
+            //頂点レイアウトの設定
+            var vertexLayout = new InputLayout(_device, _technique.GetPassByIndex(0).Description.Signature, new[] {
+                new InputElement("POSITION", 0, Format.R32G32B32_Float, 0, 0),
+                new InputElement("TEXCOORD", 0, Format.R32G32_Float, 12, 0) 
+            });
+            _device.InputAssembler.InputLayout = vertexLayout;
+            _device.InputAssembler.PrimitiveTopology = SharpDX.Direct3D.PrimitiveTopology.TriangleList;
 
             //背景描画用のメッシュの作成
-            _surfaceVertexBuffer = new VertexBuffer(_device, backBufferWidth * backBufferHeight * Marshal.SizeOf(typeof(Vertex)), Usage.WriteOnly, Vertex.Format, Pool.Default);
-            _surfaceIndexBuffer = new IndexBuffer(_device, backBufferWidth * backBufferHeight * Marshal.SizeOf(typeof(int)), Usage.WriteOnly, Pool.Default, false);
             makeSurface(surfaceResolutionWidth, surfaceResolutionHeight);
-            _effect.SetValue("ThetaMappingDepth", thetaMappingDepth);
+            _effect.GetVariableByName("ThetaMappingDepth").AsScalar().Set(thetaMappingDepth);
 
             //Barrel Distortion用のテクスチャを作成
-            _distortion = new Texture(_device, backBufferWidth, backBufferHeight, 1, Usage.RenderTarget, Format.A8R8G8B8, Pool.Default);
-            _effect.SetTexture(_effect.GetParameter(null, "Distortion"), _distortion);
+            _distortion = new Texture2D(_device, colordesc);
+            _distortionView = new RenderTargetView(_device, _distortion);
+            _effect.GetVariableByName("Distortion").AsShaderResource().SetResource(new ShaderResourceView(_device, _distortion));
 
             //オフセット表示用のテクスチャを作成
-            _offset = new Texture(_device, backBufferWidth, backBufferHeight, 1, Usage.RenderTarget, Format.A8R8G8B8, Pool.Default);
-            _effect.SetTexture(_effect.GetParameter(null, "Offset"), _offset);
-            _effect.SetValue("OffsetU", offsetU);
+            _offset = new Texture2D(_device, colordesc);
+            _offsetView = new RenderTargetView(_device, _offset);
+            _effect.GetVariableByName("Offset").AsShaderResource().SetResource(new ShaderResourceView(_device, _offset));
+            _effect.GetVariableByName("OffsetU").AsScalar().Set(offsetU);
+
+            //描画ターゲットテクスチャの作成
+            _renderTarget = new Texture2D(_device, colordesc);
+            _renderTargetView = new RenderTargetView(_device, _renderTarget);
+            _depthStencil = new Texture2D(_device, depthdesc);
+            _depthStencilView = new DepthStencilView(_device, _depthStencil);
+
+            //ImageSourceにRenderTargetを設定
+            _imageSource.SetRenderTargetDX10(_renderTarget);
 
             //Handメッシュの座標変換を設定
             var matrix = Matrix3D.Identity;
@@ -231,11 +284,11 @@ namespace OculusHand.ViewModels
             matrix.OffsetY = cameraOffsetY;
             matrix.Scale(new Vector3D(cameraScale, cameraScale, cameraScale));
 
-            float[] mat = { (float)matrix.M11,      (float)matrix.M12,      (float)matrix.M13,      (float)matrix.M14, 
+            float[] matValues = { (float)matrix.M11,      (float)matrix.M12,      (float)matrix.M13,      (float)matrix.M14, 
                             (float)matrix.M21,      (float)matrix.M22,      (float)matrix.M23,      (float)matrix.M24, 
                             (float)matrix.M31,      (float)matrix.M32,      (float)matrix.M33,      (float)matrix.M34, 
                             (float)matrix.OffsetX,  (float)matrix.OffsetY,  (float)matrix.OffsetZ,  (float)matrix.M44, };
-            _effect.SetValue("Transform", mat);
+            _effect.GetVariableByName("Transform").AsMatrix().SetMatrix(new Matrix(matValues));
         }
 
         void releaseDirect3D()
@@ -283,14 +336,36 @@ namespace OculusHand.ViewModels
                     indices.Add((y + 1) * (width + 1) + x);
                     indices.Add((y + 1) * (width + 1) + x + 1);
                 }
+            
+            //[TODO]なぜかBuffer作成時にDataStreamを指定するとメモリアクセス違反？
+            //現状DynamicなBufferしか作れないのを何とかする
 
-            var vst = _surfaceVertexBuffer.Lock(0, vertices.Count * Marshal.SizeOf(typeof(Vertex)), LockFlags.None);
-            vst.WriteRange(vertices.ToArray());
-            _surfaceVertexBuffer.Unlock();
+            //頂点バッファを作成して書き込み
+            _surfaceVertexBuffer = new Buffer(_device, new BufferDescription()
+            {
+                BindFlags = BindFlags.VertexBuffer,
+                CpuAccessFlags = CpuAccessFlags.Write,
+                OptionFlags = ResourceOptionFlags.None,
+                SizeInBytes = vertices.Count * Marshal.SizeOf(typeof(Vertex)),
+                Usage = ResourceUsage.Dynamic
+            });
+            var vertexStream = _surfaceVertexBuffer.Map(MapMode.WriteDiscard);
+            vertexStream.WriteRange(vertices.ToArray());
+            _surfaceVertexBuffer.Unmap();
 
-            var ist = _surfaceIndexBuffer.Lock(0, indices.Count * Marshal.SizeOf(typeof(int)), LockFlags.None);
-            ist.WriteRange(indices.ToArray());
-            _surfaceIndexBuffer.Unlock();
+
+            //インデックスバッファを作成して書き込み
+            _surfaceIndexBuffer = new Buffer(_device, new BufferDescription()
+            {
+                BindFlags = BindFlags.IndexBuffer,
+                CpuAccessFlags = CpuAccessFlags.Write, 
+                OptionFlags = ResourceOptionFlags.None, 
+                SizeInBytes = indices.Count * Marshal.SizeOf(typeof(int)),
+                Usage = ResourceUsage.Dynamic
+            });
+            var indexStream = _surfaceIndexBuffer.Map(MapMode.WriteDiscard);
+            indexStream.WriteRange(indices.ToArray());
+            _surfaceIndexBuffer.Unmap();
 
             _surfaceVertexCount = vertices.Count;
             _surfaceIndexCount = indices.Count;
@@ -305,12 +380,19 @@ namespace OculusHand.ViewModels
                 if (null != _indexBuffer)
                     _indexBuffer.Dispose();
 
-                _indexBuffer = new IndexBuffer(_device, size * arr.Length, Usage.WriteOnly | Usage.Dynamic, Pool.Default, false);
+                _indexBuffer = new Buffer(_device, new BufferDescription()
+                {
+                    BindFlags = BindFlags.IndexBuffer,
+                    CpuAccessFlags = CpuAccessFlags.Write,
+                    OptionFlags = ResourceOptionFlags.None,
+                    SizeInBytes = size * arr.Length,
+                    Usage = ResourceUsage.Dynamic
+                });
             }
 
-            var st = _indexBuffer.Lock(0, size * arr.Length, LockFlags.None);
-            st.WriteRange<int>(arr);
-            _indexBuffer.Unlock();
+            var ds = _indexBuffer.Map(MapMode.WriteDiscard);
+            ds.WriteRange(arr);
+            _indexBuffer.Unmap();
         }
 
         void setVertices(Vertex[] arr)
@@ -322,32 +404,51 @@ namespace OculusHand.ViewModels
                 if (null != _vertexBuffer)
                     _vertexBuffer.Dispose();
 
-                _vertexBuffer = new VertexBuffer(_device, size * arr.Length, Usage.WriteOnly | Usage.Dynamic, Vertex.Format, Pool.Default);
+                _vertexBuffer = new Buffer(_device, new BufferDescription()
+                {
+                    BindFlags = BindFlags.VertexBuffer,
+                    CpuAccessFlags = CpuAccessFlags.Write,
+                    OptionFlags = ResourceOptionFlags.None,
+                    SizeInBytes = size * arr.Length,
+                    Usage = ResourceUsage.Dynamic
+                });
             }
 
-            var st = _vertexBuffer.Lock(0, size * arr.Length, LockFlags.None);
-            st.WriteRange<Vertex>(arr);
-            _vertexBuffer.Unlock();
+            var ds = _vertexBuffer.Map(MapMode.WriteDiscard);
+            ds.WriteRange(arr);
+            _vertexBuffer.Unmap();
         }
 
         void setTexture(byte[] color, int width, int height)
         {
             if (_texture == null || 
-                _texture.GetLevelDescription(0).Width != width || 
-                _texture.GetLevelDescription(0).Height != height)
+                _texture.Description.Width != width || 
+                _texture.Description.Height != height)
             {
                 if (_texture != null)
                     _texture.Dispose();
 
-                _texture = new Texture(_device, width, height, 1, Usage.Dynamic, Format.A8R8G8B8, Pool.Default);
+                Texture2DDescription colordesc = new Texture2DDescription
+                {
+                    BindFlags = BindFlags.ShaderResource,
+                    Format = Format.B8G8R8A8_UNorm,
+                    Width = width,
+                    Height = height,
+                    MipLevels = 1,
+                    SampleDescription = new SampleDescription(1, 0),
+                    Usage = ResourceUsage.Dynamic,
+                    OptionFlags = ResourceOptionFlags.None,
+                    CpuAccessFlags = CpuAccessFlags.Write,
+                    ArraySize = 1
+                };
 
                 //テクスチャのセット
-                var handle = _effect.GetParameter(null, "HandTexture");
-                _effect.SetTexture(handle, _texture);
+                _texture = new Texture2D(_device, colordesc);
+                _effect.GetVariableByName("HandTexture").AsShaderResource().SetResource(new ShaderResourceView(_device, _texture));
             }
             
             //テクスチャの書き込み
-            var data = _texture.LockRectangle(0, LockFlags.None);
+            var data = _texture.Map(Texture2D.CalculateSubResourceIndex(0, 0, 1), MapMode.WriteDiscard, SharpDX.Direct3D10.MapFlags.None);
             unsafe
             {
                 var ptr = (byte*)data.DataPointer.ToPointer();
@@ -360,65 +461,45 @@ namespace OculusHand.ViewModels
                         ptr[(y * width + x) * 4 + 3] = 255;                             //A
                     }
             }
-            _texture.UnlockRectangle(0);
+            _texture.Unmap(Texture2D.CalculateSubResourceIndex(0, 0, 1));
         }
 
-        void render(ColorBGRA background)
+        void render(Color4 background, int width, int height)
         {
-            ImageSource.Lock();
-            ImageSource.SetBackBuffer(D3DResourceType.IDirect3DSurface9, _device.GetBackBuffer(0, 0).NativePointer);
+            _device.Rasterizer.SetViewports(new Viewport(0, 0, width, height, 0.0f, 1.0f));
 
             //通常のイメージを描画Distortion用のテクスチャに描画
-            var renderTarget = _device.GetRenderTarget(0);
-            _device.SetRenderTarget(0, _distortion.GetSurfaceLevel(0));
-
-            _device.Clear(ClearFlags.Target, background, 0, 0);
-            _device.BeginScene();
-            _effect.Begin();
-
+            _device.OutputMerger.SetTargets(_depthStencilView, _distortionView);
+            _device.ClearRenderTargetView(_distortionView, background);
+            _device.ClearDepthStencilView(_depthStencilView, DepthStencilClearFlags.Depth | DepthStencilClearFlags.Stencil, 1.0f, 0);
             drawBackground();
+            _device.ClearDepthStencilView(_depthStencilView, DepthStencilClearFlags.Depth | DepthStencilClearFlags.Stencil, 1.0f, 0);
             drawHand();
 
-            _effect.End();
-            _device.EndScene();
-
             //Offset用のテクスチャに最終画面を描画
-            _device.SetRenderTarget(0, _offset.GetSurfaceLevel(0));
-
-            _device.Clear(ClearFlags.Target, background, 0, 0);
-            _device.BeginScene();
-            _effect.Begin();
-
+            _device.OutputMerger.SetTargets(_depthStencilView, _offsetView);
+            _device.ClearRenderTargetView(_offsetView, background);
+            _device.ClearDepthStencilView(_depthStencilView, DepthStencilClearFlags.Depth | DepthStencilClearFlags.Stencil, 1.0f, 0);
             drawBarrelDistortion();
 
-            _effect.End();
-            _device.EndScene();
-
             //最終画面をオフセットして描画
-            _device.SetRenderTarget(0, renderTarget);
-
-            _device.Clear(ClearFlags.Target, background, 0, 0);
-            _device.BeginScene();
-            _effect.Begin();
-
+            _device.OutputMerger.SetTargets(_depthStencilView, _renderTargetView);
+            _device.ClearRenderTargetView(_renderTargetView, background);
+            _device.ClearDepthStencilView(_depthStencilView, DepthStencilClearFlags.Depth | DepthStencilClearFlags.Stencil, 1.0f, 0);
             drawOffset();
 
-            _effect.End();
-            _device.EndScene();
-
-            ImageSource.AddDirtyRect(new Int32Rect(0, 0, ImageSource.PixelWidth, ImageSource.PixelHeight));
-            ImageSource.Unlock();
+            //WPFの画像を更新
+            _device.Flush();
+            ImageSource.InvalidateD3DImage();
         }
 
         void drawBackground()
         {
-            _device.SetStreamSource(0, _surfaceVertexBuffer, 0, Marshal.SizeOf(typeof(Vertex)));
-            _device.Indices = _surfaceIndexBuffer;
+            _device.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(_surfaceVertexBuffer, Marshal.SizeOf(typeof(Vertex)), 0));
+            _device.InputAssembler.SetIndexBuffer(_surfaceIndexBuffer, SharpDX.DXGI.Format.R32_UInt, 0);
 
-            _device.SetRenderState(RenderState.FillMode, FillMode.Solid);
-            _effect.BeginPass(2);
-            _device.DrawIndexedPrimitive(PrimitiveType.TriangleList, 0, 0, _surfaceVertexCount, 0, _surfaceIndexCount / 3);
-            _effect.EndPass();
+            _technique.GetPassByIndex(2).Apply();
+            _device.DrawIndexed(_surfaceIndexCount, 0, 0);
         }
 
         void drawHand()
@@ -426,50 +507,29 @@ namespace OculusHand.ViewModels
             if (_vertexBuffer == null || _indexBuffer == null)
                 return;
 
-            _device.SetStreamSource(0, _vertexBuffer, 0, Marshal.SizeOf(typeof(Vertex)));
-            _device.Indices = _indexBuffer;
+            _device.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(_vertexBuffer, Marshal.SizeOf(typeof(Vertex)), 0));
+            _device.InputAssembler.SetIndexBuffer(_indexBuffer, SharpDX.DXGI.Format.R32_UInt, 0);
 
-            //Mesh 
-            _device.SetRenderState(RenderState.FillMode, FillMode.Solid);
-            _effect.BeginPass(0);
-            if (0 < _vertexCount && 0 < _indexCount)
-                lock (_bufferUpdateLock)
-                {
-                    _device.DrawIndexedPrimitive(PrimitiveType.TriangleList, 0, 0, _vertexCount, 0, _indexCount / 3);
-                }
-            _effect.EndPass();
-
-            //Wire frame
-            //_device.SetRenderState(RenderState.FillMode, FillMode.Wireframe);
-            //_effect.BeginPass(1);
-            //if (0 < _vertexCount && 0 < _indexCount)
-            //    lock (_bufferUpdateLock)
-            //    {
-            //        _device.DrawIndexedPrimitive(PrimitiveType.TriangleList, 0, 0, _vertexCount, 0, _indexCount / 3);
-            //    }
-            //_effect.EndPass();
+            _technique.GetPassByIndex(0).Apply();
+            _device.DrawIndexed(_indexCount, 0, 0);
         }
 
         void drawBarrelDistortion()
         {
-            _device.SetStreamSource(0, _surfaceVertexBuffer, 0, Marshal.SizeOf(typeof(Vertex)));
-            _device.Indices = _surfaceIndexBuffer;
+            _device.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(_surfaceVertexBuffer, Marshal.SizeOf(typeof(Vertex)), 0));
+            _device.InputAssembler.SetIndexBuffer(_surfaceIndexBuffer, SharpDX.DXGI.Format.R32_UInt, 0);
 
-            _device.SetRenderState(RenderState.FillMode, FillMode.Solid);
-            _effect.BeginPass(4);
-            _device.DrawIndexedPrimitive(PrimitiveType.TriangleList, 0, 0, _surfaceVertexCount, 0, _surfaceIndexCount / 3);
-            _effect.EndPass();
+            _technique.GetPassByIndex(4).Apply();
+            _device.DrawIndexed(_surfaceIndexCount, 0, 0);
         }
 
         void drawOffset()
         {
-            _device.SetStreamSource(0, _surfaceVertexBuffer, 0, Marshal.SizeOf(typeof(Vertex)));
-            _device.Indices = _surfaceIndexBuffer;
+            _device.InputAssembler.SetVertexBuffers(0, new VertexBufferBinding(_surfaceVertexBuffer, Marshal.SizeOf(typeof(Vertex)), 0));
+            _device.InputAssembler.SetIndexBuffer(_surfaceIndexBuffer, SharpDX.DXGI.Format.R32_UInt, 0);
 
-            _device.SetRenderState(RenderState.FillMode, FillMode.Solid);
-            _effect.BeginPass(5);
-            _device.DrawIndexedPrimitive(PrimitiveType.TriangleList, 0, 0, _surfaceVertexCount, 0, _surfaceIndexCount / 3);
-            _effect.EndPass();
+            _technique.GetPassByIndex(5).Apply();
+            _device.DrawIndexed(_surfaceIndexCount, 0, 0);
         }
 
         /// <summary>
@@ -478,11 +538,8 @@ namespace OculusHand.ViewModels
         [StructLayout(LayoutKind.Sequential)]
         struct Vertex
         {
-            //[TODO]VertexFormat.Texture0だとシェーダに値が渡らない問題を解決する
-            public static readonly VertexFormat Format = VertexFormat.Position | VertexFormat.Normal;
-
             public Vector3 Position;
-            public Vector3 Texture;
+            public Vector2 Texture;
 
             public Vertex(float x, float y, float z, float u, float v)
             {
@@ -492,7 +549,6 @@ namespace OculusHand.ViewModels
 
                 Texture.X = u;
                 Texture.Y = v;
-                Texture.Z = 0;
             }
         }
 
