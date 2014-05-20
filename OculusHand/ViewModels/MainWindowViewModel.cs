@@ -71,6 +71,9 @@ namespace OculusHand.ViewModels
 
             BackgroundImagePath = files[(int)_backgroundImageIndex];
             _backgroundImageAutoUpdateInterval = config.Parameters.BackgroundImageAutoUpdateInterval;
+
+            //マウスカーソルを消す
+            Mouse.OverrideCursor = System.Windows.Input.Cursors.None;
         }
 
         ~MainWindowViewModel()
@@ -288,6 +291,9 @@ namespace OculusHand.ViewModels
                 base.Dispose();
                 disposeCamera();
                 _oculus.Dispose();
+
+                //マウスカーソルを消す
+                Mouse.OverrideCursor = null;
             }
         }
         #endregion
