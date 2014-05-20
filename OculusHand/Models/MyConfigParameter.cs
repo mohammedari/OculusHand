@@ -31,6 +31,7 @@ namespace OculusHand.Models
 
         public float OffsetU { get; set; }
         public double BackgroundImageAutoUpdateInterval { get; set; }
+        public float LensHorizontalDistanceRatioFromCenter { get; set; }
 
         public override void Initialize()
         {
@@ -53,8 +54,9 @@ namespace OculusHand.Models
             CameraOffsetY = 0.15;
             CameraScale = 2;
 
-            OffsetU = 0.045f;
+            OffsetU = 0.0f;
             BackgroundImageAutoUpdateInterval = 30;
+            LensHorizontalDistanceRatioFromCenter = 0.3f;
         }
 
         public override object Clone()
